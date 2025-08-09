@@ -1,0 +1,50 @@
+﻿<Window x:Class="EldenRingTool.MutliSpawn"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Multi-Spawn" Height="500" Width="700">
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="2*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Left Panel: Available Items -->
+        <StackPanel Grid.Column="0">
+            <TextBox Name="FilterBox" Margin="0 0 0 5" TextChanged="FilterBox_TextChanged"/>
+            <ListBox Name="AvailableListBox" Height="300" 
+                     AllowDrop="True"
+                     PreviewMouseLeftButtonDown="ListBox_PreviewMouseLeftButtonDown"
+                     MouseMove="ListBox_MouseMove"
+                     Drop="AvailableListBox_Drop"/>
+        </StackPanel>
+
+        <!-- Shuttle Buttons -->
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0">
+            <Button Content="&gt;" Click="AddButton_Click" Width="40" Margin="0 5"/>
+            <Button Content="&lt;" Click="RemoveButton_Click" Width="40" Margin="0 5"/>
+            <Button Content="&gt;&gt;" Click="AddAllButton_Click" Width="40" Margin="0 5"/>
+            <Button Content="&lt;&lt;" Click="RemoveAllButton_Click" Width="40" Margin="0 5"/>
+        </StackPanel>
+
+        <!-- Right Panel: Selected Items -->
+        <StackPanel Grid.Column="2">
+            <ListBox Name="SelectedListBox" Height="300" 
+                     AllowDrop="True"
+                     PreviewMouseLeftButtonDown="ListBox_PreviewMouseLeftButtonDown"
+                     MouseMove="ListBox_MouseMove"
+                     Drop="SelectedListBox_Drop"/>
+        </StackPanel>
+
+        <!-- Bottom Controls -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,10,0,0" Grid.ColumnSpan="3" >
+            <TextBox Name="ListNameBox" Width="200" Margin="0,0,10,0" />
+            <Button Content="Save List" Click="SaveButton_Click" Width="100" Margin="0,0,10,0"/>
+            <ComboBox Name="SavedListsCombo" Width="200" SelectionChanged="SavedListsCombo_SelectionChanged"/>
+        </StackPanel>
+    </Grid>
+</Window>
