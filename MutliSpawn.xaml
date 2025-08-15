@@ -83,10 +83,11 @@
         </StackPanel>
 
         <!-- Bottom Controls -->
-        <!--<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,10,0,0" Grid.ColumnSpan="3" Grid.Row="3" Height="20px">
-            <TextBox Name="ListNameBox" Width="200" Margin="0,0,10,0" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,10,0,0" Grid.ColumnSpan="3" Grid.Row="3" Height="20px">
+            <!--<TextBox Name="ListNameBox" Width="200" Margin="0,0,10,0" />
             <Button Content="Save List" Click="SaveButton_Click" Width="100" Margin="0,0,10,0"/>
-            <ComboBox Name="SavedListsCombo" Width="200" SelectionChanged="SavedListsCombo_SelectionChanged"/>
-        </StackPanel>-->
+            <ComboBox Name="SavedListsCombo" Width="200" SelectionChanged="SavedListsCombo_SelectionChanged"/>-->
+            <Button Content="Spawn IO" Click="btnSpawnAll_Click" Width="100" Margin="0,0,10,0"/>
+        </StackPanel>
     </Grid>
 </Window>

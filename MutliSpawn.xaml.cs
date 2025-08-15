@@ -151,5 +151,35 @@ namespace EldenRingTool
                 SelectedItems.Remove(item);
             }
         }
+
+        private void btnSpawnAll_Click(object sender, RoutedEventArgs e)
+        {
+            SpawnSelectedItems();
+        }
+
+        private void SpawnSelectedItems()
+        {
+            foreach (var selected in SelectedItems)
+            {
+                try
+                {
+                    var item = ItemDB.Items.FirstOrDefault(x => x.Item2 == selected.Id);
+                    if (item == default) continue;
+
+                    uint level = (uint)selected.Level;
+                    uint infusionId = selected.InfusionId;
+                    uint ashId = selected.AshOfWarId;
+                    uint quantity = (uint)selected.Quantity;
+
+                    uint itemID = item.Item2 + level + infusionId;
+
+                    _process.spawnItem(itemID, quantity, ashId);
+                }
+                catch
+                {
+                    MessageBox.Show($"Error spawning item: {selected.Name}");
+                }
+            }
+        }
     }
 }
