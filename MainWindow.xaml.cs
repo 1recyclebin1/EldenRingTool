@@ -758,7 +758,7 @@ namespace EldenRingTool
         {
             var good = _process?.weGood ?? false;
             dockPanel.IsEnabled = good;
-            Title = good ? _normalTitle : "F?";
+            Title = good ? _normalTitle : "BlameLank";
 
             if (!good) { return; }
             if (_hooked)
