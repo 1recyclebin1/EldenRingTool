@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Policy;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,12 +19,28 @@ namespace EldenRingTool
         public ObservableCollection<Item> AvailableItems { get; private set; }
         public ICollectionView AvailableItemsView { get; set; } // For filtering
         public ObservableCollection<Item> SelectedItems { get; set; }
+        public ObservableCollection<Lookup> Infusions { get; private set; }
+        public ObservableCollection<Lookup> Ashes { get; private set; }
+
 
         private Point startPoint;
         private const string SaveFileName = "savedLists.csv";
         ERProcess _process;
 
         public class Item
+        {
+            public string Name { get; set; }
+            public uint Id { get; set; }
+            public int Level { get; set; }
+            public uint InfusionId { get; set; }
+            public string InfusionName { get; set; } 
+
+            public uint AshOfWarId { get; set; }
+            public string AshOfWarName { get; set; } 
+            public int Quantity { get; set; }
+        }
+
+        public class Lookup
         {
             public string Name { get; set; }
             public uint Id { get; set; }
@@ -43,6 +60,22 @@ namespace EldenRingTool
         {
             AvailableItems = new ObservableCollection<Item>(
                 ItemDB.Items.Select(item => new Item
+                {
+                    Name = item.Item1,
+                    Id = item.Item2
+                })
+            );
+
+            Infusions = new ObservableCollection<Lookup>(
+                ItemDB.Infusions.Select(item => new Lookup
+                {
+                    Name = item.Item1,
+                    Id = item.Item2
+                })
+            );
+
+            Ashes = new ObservableCollection<Lookup>(
+                ItemDB.Ashes.Select(item => new Lookup
                 {
                     Name = item.Item1,
                     Id = item.Item2
@@ -88,13 +121,26 @@ namespace EldenRingTool
 
         private void AddButton_Click(object sender, RoutedEventArgs e)
         {
-            var toMove = AvailableList.SelectedItems.Cast<Item>().ToList();
-            foreach (var item in toMove)
-            {
-                SelectedItems.Add(new Item { Name = item.Name, Id = item.Id });
-            }
+            uint infusionId = comboInfusion.SelectedValue is uint iv ? iv : 0;
+            uint ashId = comboAsh.SelectedValue is uint av ? av : 0;
 
-            AvailableItemsView.Refresh();
+            var selectedInfusion = Infusions.FirstOrDefault(i => i.Id == infusionId);
+            var selectedAsh = Ashes.FirstOrDefault(a => a.Id == ashId);
+
+            foreach (var item in AvailableList.SelectedItems.Cast<Item>())
+            {
+                SelectedItems.Add(new Item
+                {
+                    Name = item.Name,
+                    Id = item.Id,
+                    Level = int.TryParse(txtLevel.Text, out var lvl) ? lvl : 0,
+                    InfusionId = selectedInfusion?.Id ?? 0,
+                    InfusionName = selectedInfusion?.Name ?? "Normal",
+                    AshOfWarId = selectedAsh?.Id ?? 0,
+                    AshOfWarName = selectedAsh?.Name ?? "Default",
+                    Quantity = int.TryParse(txtQuantity.Text, out var qty) ? qty : 1
+                });
+            }
         }
 
         private void RemoveButton_Click(object sender, RoutedEventArgs e)
@@ -103,10 +149,7 @@ namespace EldenRingTool
             foreach (var item in toMove)
             {
                 SelectedItems.Remove(item);
-                // No need to add back to AvailableItems if the original collection remains unchanged
             }
-
-            AvailableItemsView.Refresh();
         }
     }
 }
