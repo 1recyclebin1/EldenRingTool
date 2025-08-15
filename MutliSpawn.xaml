@@ -16,16 +16,16 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Column="0" Grid.Row="0" Orientation="Horizontal" >
-            <Label>Filter:</Label>
+            <Label>Search:</Label>
             <TextBox Name="FilterBox" Margin="0 0 0 5" TextChanged="FilterBox_TextChanged" Width="250"/>
         </StackPanel>
         <!-- Left Panel: Available Items -->
         <StackPanel Grid.Column="0" Grid.Row="1">
-            <ListBox Name="AvailableListBox" Height="300"
+            <ListBox x:Name="AvailableList" Height="300"
                      ItemsSource="{Binding AvailableItems}"
                      DisplayMemberPath="Name"/>
         </StackPanel>
-        
+
         <StackPanel Orientation="Horizontal" Grid.Row="2">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -47,13 +47,9 @@
                 <ComboBox Grid.Row="1" Grid.Column="2" x:Name="comboAsh">Default</ComboBox>
                 <Label Grid.Row="0" Grid.Column="3">Qty:</Label>
                 <TextBox Grid.Row="1" Grid.Column="3" x:Name="txtQuantity" TextAlignment="Center">1</TextBox>
-              
+
             </Grid>
         </StackPanel>
-        
-        <!-- 
-            Need something here for item level/infusion/AoW/etc
-        -->
 
         <!-- Shuttle Buttons -->
         <StackPanel Grid.Column="1" Grid.Row="1" VerticalAlignment="Center" Margin="10,0">
@@ -63,14 +59,17 @@
 
         <!-- Right Panel: Selected Items -->
         <StackPanel Grid.Column="2" Grid.Row="1">
-            <ListBox Name="SelectedListBox" Height="300"/>
+            <ListBox x:Name="SelectedList" 
+                     ItemsSource="{Binding SelectedItems}"
+                     DisplayMemberPath="Name"
+                     Height="300"/>
         </StackPanel>
 
         <!-- Bottom Controls -->
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,10,0,0" Grid.ColumnSpan="3" Grid.Row="3" Height="20px">
+        <!--<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,10,0,0" Grid.ColumnSpan="3" Grid.Row="3" Height="20px">
             <TextBox Name="ListNameBox" Width="200" Margin="0,0,10,0" />
             <Button Content="Save List" Click="SaveButton_Click" Width="100" Margin="0,0,10,0"/>
             <ComboBox Name="SavedListsCombo" Width="200" SelectionChanged="SavedListsCombo_SelectionChanged"/>
-        </StackPanel>
+        </StackPanel>-->
     </Grid>
 </Window>

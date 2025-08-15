@@ -17,6 +17,8 @@ namespace EldenRingTool
     {
         public ObservableCollection<Item> AvailableItems { get; private set; }
         public ICollectionView AvailableItemsView { get; set; } // For filtering
+        public ObservableCollection<Item> SelectedItems { get; set; }
+
         private Point startPoint;
         private const string SaveFileName = "savedLists.csv";
         ERProcess _process;
@@ -35,7 +37,6 @@ namespace EldenRingTool
             _process = process;
             InitializeComponent();
             populate();
-            DataContext = this;
         }
 
         private void populate()
@@ -48,19 +49,28 @@ namespace EldenRingTool
                 })
             );
 
-            AvailableItemsView = CollectionViewSource.GetDefaultView(AvailableItems);
+            SelectedItems = new ObservableCollection<Item>();
 
+            AvailableItemsView = CollectionViewSource.GetDefaultView(AvailableItems);
+            AvailableItemsView.Filter = FilterAvailableItems;
+
+            DataContext = this;
         }
 
-        //private void RefreshAvailableList(string filter = "")
-        //{
-        //    AvailableListBox.Items.Clear();
-        //    foreach (var item in allAvailableItems.Where(i => i.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0
-        //                                                     && !SelectedListBox.Items.Contains(i)))
-        //    {
-        //        AvailableListBox.Items.Add(item);
-        //    }
-        //}
+        private bool FilterAvailableItems(object obj)
+        {
+            if (obj is Item item)
+            {
+                // Remove items that are already in SelectedItems
+                if (SelectedItems.Contains(item))
+                    return false;
+
+                // Filter by TextBox input
+                string filter = FilterBox?.Text?.ToLower() ?? "";
+                return string.IsNullOrEmpty(filter) || item.Name.ToLower().Contains(filter);
+            }
+            return false;
+        }
 
         private void FilterBox_TextChanged(object sender, TextChangedEventArgs e)
         {
@@ -78,204 +88,25 @@ namespace EldenRingTool
 
         private void AddButton_Click(object sender, RoutedEventArgs e)
         {
-            if (true)
-                return;
-            //var selected = AvailableListBox.SelectedItems.Cast<string>().ToList();
-            //foreach (var item in selected)
-            //    SelectedListBox.Items.Add(item);
+            var toMove = AvailableList.SelectedItems.Cast<Item>().ToList();
+            foreach (var item in toMove)
+            {
+                SelectedItems.Add(new Item { Name = item.Name, Id = item.Id });
+            }
 
-            //RefreshAvailableList(FilterBox.Text);
+            AvailableItemsView.Refresh();
         }
 
         private void RemoveButton_Click(object sender, RoutedEventArgs e)
         {
-            //var selected = SelectedListBox.SelectedItems.Cast<string>().ToList();
-            //foreach (var item in selected)
-            //    SelectedListBox.Items.Remove(item);
-
-            //RefreshAvailableList(FilterBox.Text);
-        }
-
-        private void AddAllButton_Click(object sender, RoutedEventArgs e)
-        {
-            //foreach (var item in AvailableListBox.Items.Cast<string>().ToList())
-            //    SelectedListBox.Items.Add(item);
-
-            //RefreshAvailableList(FilterBox.Text);
-        }
-
-        private void RemoveAllButton_Click(object sender, RoutedEventArgs e)
-        {
-            //SelectedListBox.Items.Clear();
-            //RefreshAvailableList(FilterBox.Text);
-        }
-
-        // Drag start
-        private void ListBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            startPoint = e.GetPosition(null);
-        }
-
-        // Drag move
-        private void ListBox_MouseMove(object sender, MouseEventArgs e)
-        {
-            Point mousePos = e.GetPosition(null);
-            Vector diff = startPoint - mousePos;
-
-            if (e.LeftButton == MouseButtonState.Pressed &&
-                (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
-                 Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance))
+            var toMove = SelectedList.SelectedItems.Cast<Item>().ToList();
+            foreach (var item in toMove)
             {
-                ListBox listBox = sender as ListBox;
-                if (listBox?.SelectedItem == null) return;
-
-                string selectedItem = listBox.SelectedItem as string;
-                DragDrop.DoDragDrop(listBox, selectedItem, DragDropEffects.Move);
-            }
-        }
-
-        // Drop handlers
-        private void SelectedListBox_Drop(object sender, DragEventArgs e)
-        {
-            //if (e.Data.GetDataPresent(typeof(string)))
-            //{
-            //    var item = (string)e.Data.GetData(typeof(string));
-            //    if (!SelectedListBox.Items.Contains(item))
-            //        SelectedListBox.Items.Add(item);
-
-            //    RefreshAvailableList(FilterBox.Text);
-            //}
-        }
-
-        private void AvailableListBox_Drop(object sender, DragEventArgs e)
-        {
-            //if (e.Data.GetDataPresent(typeof(string)))
-            //{
-            //    var item = (string)e.Data.GetData(typeof(string));
-            //    SelectedListBox.Items.Remove(item);
-            //    RefreshAvailableList(FilterBox.Text);
-            //}
-        }
-
-        // Save list by name
-        private void SaveButton_Click(object sender, RoutedEventArgs e)
-        {
-            string listName = ListNameBox.Text.Trim();
-            if (string.IsNullOrEmpty(listName))
-            {
-                MessageBox.Show("Please enter a list name.");
-                return;
+                SelectedItems.Remove(item);
+                // No need to add back to AvailableItems if the original collection remains unchanged
             }
 
-            var items = SelectedListBox.Items.Cast<string>().ToList();
-            savedLists[listName] = items;
-
-            SaveAllListsToCsv();
-
-            if (!SavedListsCombo.Items.Contains(listName))
-                SavedListsCombo.Items.Add(listName);
-
-            MessageBox.Show($"List '{listName}' saved.");
-        }
-
-        // Load selected list from combo
-        private void SavedListsCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            //if (SavedListsCombo.SelectedItem is string selectedName && savedLists.ContainsKey(selectedName))
-            //{
-            //    SelectedListBox.Items.Clear();
-            //    foreach (var item in savedLists[selectedName])
-            //        SelectedListBox.Items.Add(item);
-
-            //    RefreshAvailableList(FilterBox.Text);
-            //    ListNameBox.Text = selectedName;
-            //}
-        }
-
-        // Load all lists from CSV file
-        private void LoadSavedLists()
-        {
-            savedLists.Clear();
-            SavedListsCombo.Items.Clear();
-
-            if (!File.Exists(SaveFileName)) return;
-
-            var lines = File.ReadAllLines(SaveFileName);
-            foreach (var line in lines)
-            {
-                var parts = ParseCsvLine(line);
-                if (parts.Count > 0)
-                {
-                    string listName = parts[0];
-                    var items = parts.Skip(1).ToList();
-                    savedLists[listName] = items;
-                    SavedListsCombo.Items.Add(listName);
-                }
-            }
-        }
-
-        // Save all lists to CSV file
-        private void SaveAllListsToCsv()
-        {
-            var lines = new List<string>();
-
-            foreach (var kvp in savedLists)
-            {
-                var listName = EscapeCsvField(kvp.Key);
-                var items = kvp.Value.Select(EscapeCsvField);
-                string line = listName + "," + string.Join(",", items);
-                lines.Add(line);
-            }
-
-            File.WriteAllLines(SaveFileName, lines);
-        }
-
-        // Helper: parse CSV line with quotes
-        private List<string> ParseCsvLine(string line)
-        {
-            var values = new List<string>();
-            bool inQuotes = false;
-            var value = new StringBuilder();
-
-            for (int i = 0; i < line.Length; i++)
-            {
-                char c = line[i];
-                if (c == '"')
-                {
-                    if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
-                    {
-                        // Escaped quote
-                        value.Append('"');
-                        i++;
-                    }
-                    else
-                    {
-                        inQuotes = !inQuotes;
-                    }
-                }
-                else if (c == ',' && !inQuotes)
-                {
-                    values.Add(value.ToString());
-                    value.Clear();
-                }
-                else
-                {
-                    value.Append(c);
-                }
-            }
-            values.Add(value.ToString());
-
-            return values;
-        }
-
-        // Helper: escape fields for CSV
-        private string EscapeCsvField(string field)
-        {
-            if (field.Contains('"'))
-                field = field.Replace("\"", "\"\"");
-            if (field.Contains(',') || field.Contains('"') || field.Contains('\n'))
-                field = $"\"{field}\"";
-            return field;
+            AvailableItemsView.Refresh();
         }
     }
 }
