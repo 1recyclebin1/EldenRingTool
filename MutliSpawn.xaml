@@ -1,7 +1,7 @@
 ﻿<Window x:Class="EldenRingTool.MutliSpawn"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Multi-Spawn" Height="500" Width="700">
+        Title="Multi-Spawn" Height="480px" Width="700">
     <Grid Margin="10">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="2*" />
@@ -11,37 +11,63 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="35px" />
         </Grid.RowDefinitions>
 
-        <!-- Left Panel: Available Items -->
-        <StackPanel Grid.Column="0">
-            <TextBox Name="FilterBox" Margin="0 0 0 5" TextChanged="FilterBox_TextChanged"/>
-            <ListBox Name="AvailableListBox" Height="300" 
-                     AllowDrop="True"
-                     PreviewMouseLeftButtonDown="ListBox_PreviewMouseLeftButtonDown"
-                     MouseMove="ListBox_MouseMove"
-                     Drop="AvailableListBox_Drop"/>
+        <StackPanel Grid.Column="0" Grid.Row="0" Orientation="Horizontal" >
+            <Label>Filter:</Label>
+            <TextBox Name="FilterBox" Margin="0 0 0 5" TextChanged="FilterBox_TextChanged" Width="250"/>
         </StackPanel>
+        <!-- Left Panel: Available Items -->
+        <StackPanel Grid.Column="0" Grid.Row="1">
+            <ListBox Name="AvailableListBox" Height="300"
+                     ItemsSource="{Binding AvailableItems}"
+                     DisplayMemberPath="Name"/>
+        </StackPanel>
+        
+        <StackPanel Orientation="Horizontal" Grid.Row="2">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="90px" />
+                    <ColumnDefinition Width="140px" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Label Grid.Row="0" Grid.Column="0">Level:</Label>
+                <TextBox Grid.Row="1" Grid.Column="0" Width="30px" x:Name="txtLevel" TextAlignment="Center">0</TextBox>
+                <Label Grid.Row="0" Grid.Column="1">Infusion:</Label>
+                <ComboBox Grid.Row="1" Grid.Column="1" x:Name="comboInfusion">Normal</ComboBox>
+                <Label Grid.Row="0" Grid.Column="2">Ash of War:</Label>
+                <ComboBox Grid.Row="1" Grid.Column="2" x:Name="comboAsh">Default</ComboBox>
+                <Label Grid.Row="0" Grid.Column="3">Qty:</Label>
+                <TextBox Grid.Row="1" Grid.Column="3" x:Name="txtQuantity" TextAlignment="Center">1</TextBox>
+              
+            </Grid>
+        </StackPanel>
+        
+        <!-- 
+            Need something here for item level/infusion/AoW/etc
+        -->
 
         <!-- Shuttle Buttons -->
-        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0">
+        <StackPanel Grid.Column="1" Grid.Row="1" VerticalAlignment="Center" Margin="10,0">
             <Button Content="&gt;" Click="AddButton_Click" Width="40" Margin="0 5"/>
             <Button Content="&lt;" Click="RemoveButton_Click" Width="40" Margin="0 5"/>
-            <Button Content="&gt;&gt;" Click="AddAllButton_Click" Width="40" Margin="0 5"/>
-            <Button Content="&lt;&lt;" Click="RemoveAllButton_Click" Width="40" Margin="0 5"/>
         </StackPanel>
 
         <!-- Right Panel: Selected Items -->
-        <StackPanel Grid.Column="2">
-            <ListBox Name="SelectedListBox" Height="300" 
-                     AllowDrop="True"
-                     PreviewMouseLeftButtonDown="ListBox_PreviewMouseLeftButtonDown"
-                     MouseMove="ListBox_MouseMove"
-                     Drop="SelectedListBox_Drop"/>
+        <StackPanel Grid.Column="2" Grid.Row="1">
+            <ListBox Name="SelectedListBox" Height="300"/>
         </StackPanel>
 
         <!-- Bottom Controls -->
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,10,0,0" Grid.ColumnSpan="3" >
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,10,0,0" Grid.ColumnSpan="3" Grid.Row="3" Height="20px">
             <TextBox Name="ListNameBox" Width="200" Margin="0,0,10,0" />
             <Button Content="Save List" Click="SaveButton_Click" Width="100" Margin="0,0,10,0"/>
             <ComboBox Name="SavedListsCombo" Width="200" SelectionChanged="SavedListsCombo_SelectionChanged"/>

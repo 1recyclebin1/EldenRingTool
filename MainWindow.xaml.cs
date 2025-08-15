@@ -1680,6 +1680,13 @@ namespace EldenRingTool
             itemSpawn.Show();
         }
 
+        private void multiSpawn(object sender, RoutedEventArgs e)
+        {
+            var multiSpawn = new MutliSpawn(_process);
+            multiSpawn.Owner = this;
+            multiSpawn.Show();
+        }
+
         private void torrentAnywhereOn(object sender, RoutedEventArgs e)
         {
             _process.setTorrentAnywherePatch(true);

@@ -1,68 +1,113 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 
 namespace EldenRingTool
 {
     public partial class MutliSpawn : Window
     {
-        private List<string> allAvailableItems;
+        public ObservableCollection<Item> AvailableItems { get; private set; }
+        public ICollectionView AvailableItemsView { get; set; } // For filtering
         private Point startPoint;
         private const string SaveFileName = "savedLists.csv";
+        ERProcess _process;
+
+        public class Item
+        {
+            public string Name { get; set; }
+            public uint Id { get; set; }
+        }
 
         // Holds all saved lists by name
         private Dictionary<string, List<string>> savedLists = new Dictionary<string, List<string>>();
 
-        private void RefreshAvailableList(string filter = "")
+        public MutliSpawn(ERProcess process)
         {
-            AvailableListBox.Items.Clear();
-            foreach (var item in allAvailableItems.Where(i => i.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0
-                                                             && !SelectedListBox.Items.Contains(i)))
-            {
-                AvailableListBox.Items.Add(item);
-            }
+            _process = process;
+            InitializeComponent();
+            populate();
+            DataContext = this;
         }
+
+        private void populate()
+        {
+            AvailableItems = new ObservableCollection<Item>(
+                ItemDB.Items.Select(item => new Item
+                {
+                    Name = item.Item1,
+                    Id = item.Item2
+                })
+            );
+
+            AvailableItemsView = CollectionViewSource.GetDefaultView(AvailableItems);
+
+        }
+
+        //private void RefreshAvailableList(string filter = "")
+        //{
+        //    AvailableListBox.Items.Clear();
+        //    foreach (var item in allAvailableItems.Where(i => i.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0
+        //                                                     && !SelectedListBox.Items.Contains(i)))
+        //    {
+        //        AvailableListBox.Items.Add(item);
+        //    }
+        //}
 
         private void FilterBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            RefreshAvailableList(FilterBox.Text);
+            string filter = FilterBox.Text.ToLower();
+
+            AvailableItemsView.Filter = item =>
+            {
+                if (item is Item i)
+                {
+                    return i.Name.ToLower().Contains(filter);
+                }
+                return false;
+            };
         }
 
         private void AddButton_Click(object sender, RoutedEventArgs e)
         {
-            var selected = AvailableListBox.SelectedItems.Cast<string>().ToList();
-            foreach (var item in selected)
-                SelectedListBox.Items.Add(item);
+            if (true)
+                return;
+            //var selected = AvailableListBox.SelectedItems.Cast<string>().ToList();
+            //foreach (var item in selected)
+            //    SelectedListBox.Items.Add(item);
 
-            RefreshAvailableList(FilterBox.Text);
+            //RefreshAvailableList(FilterBox.Text);
         }
 
         private void RemoveButton_Click(object sender, RoutedEventArgs e)
         {
-            var selected = SelectedListBox.SelectedItems.Cast<string>().ToList();
-            foreach (var item in selected)
-                SelectedListBox.Items.Remove(item);
+            //var selected = SelectedListBox.SelectedItems.Cast<string>().ToList();
+            //foreach (var item in selected)
+            //    SelectedListBox.Items.Remove(item);
 
-            RefreshAvailableList(FilterBox.Text);
+            //RefreshAvailableList(FilterBox.Text);
         }
 
         private void AddAllButton_Click(object sender, RoutedEventArgs e)
         {
-            foreach (var item in AvailableListBox.Items.Cast<string>().ToList())
-                SelectedListBox.Items.Add(item);
+            //foreach (var item in AvailableListBox.Items.Cast<string>().ToList())
+            //    SelectedListBox.Items.Add(item);
 
-            RefreshAvailableList(FilterBox.Text);
+            //RefreshAvailableList(FilterBox.Text);
         }
 
         private void RemoveAllButton_Click(object sender, RoutedEventArgs e)
         {
-            SelectedListBox.Items.Clear();
-            RefreshAvailableList(FilterBox.Text);
+            //SelectedListBox.Items.Clear();
+            //RefreshAvailableList(FilterBox.Text);
         }
 
         // Drag start
@@ -92,24 +137,24 @@ namespace EldenRingTool
         // Drop handlers
         private void SelectedListBox_Drop(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(typeof(string)))
-            {
-                var item = (string)e.Data.GetData(typeof(string));
-                if (!SelectedListBox.Items.Contains(item))
-                    SelectedListBox.Items.Add(item);
+            //if (e.Data.GetDataPresent(typeof(string)))
+            //{
+            //    var item = (string)e.Data.GetData(typeof(string));
+            //    if (!SelectedListBox.Items.Contains(item))
+            //        SelectedListBox.Items.Add(item);
 
-                RefreshAvailableList(FilterBox.Text);
-            }
+            //    RefreshAvailableList(FilterBox.Text);
+            //}
         }
 
         private void AvailableListBox_Drop(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(typeof(string)))
-            {
-                var item = (string)e.Data.GetData(typeof(string));
-                SelectedListBox.Items.Remove(item);
-                RefreshAvailableList(FilterBox.Text);
-            }
+            //if (e.Data.GetDataPresent(typeof(string)))
+            //{
+            //    var item = (string)e.Data.GetData(typeof(string));
+            //    SelectedListBox.Items.Remove(item);
+            //    RefreshAvailableList(FilterBox.Text);
+            //}
         }
 
         // Save list by name
@@ -136,15 +181,15 @@ namespace EldenRingTool
         // Load selected list from combo
         private void SavedListsCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (SavedListsCombo.SelectedItem is string selectedName && savedLists.ContainsKey(selectedName))
-            {
-                SelectedListBox.Items.Clear();
-                foreach (var item in savedLists[selectedName])
-                    SelectedListBox.Items.Add(item);
+            //if (SavedListsCombo.SelectedItem is string selectedName && savedLists.ContainsKey(selectedName))
+            //{
+            //    SelectedListBox.Items.Clear();
+            //    foreach (var item in savedLists[selectedName])
+            //        SelectedListBox.Items.Add(item);
 
-                RefreshAvailableList(FilterBox.Text);
-                ListNameBox.Text = selectedName;
-            }
+            //    RefreshAvailableList(FilterBox.Text);
+            //    ListNameBox.Text = selectedName;
+            //}
         }
 
         // Load all lists from CSV file
