@@ -49,7 +49,6 @@ namespace EldenRingTool
             public uint Id { get; set; }
         }
 
-        // Holds all saved lists by name
         private Dictionary<string, List<string>> savedLists = new Dictionary<string, List<string>>();
 
         public MutliSpawn(ERProcess process)
@@ -99,11 +98,9 @@ namespace EldenRingTool
         {
             if (obj is Item item)
             {
-                // Remove items that are already in SelectedItems
                 if (SelectedItems.Contains(item))
                     return false;
 
-                // Filter by TextBox input
                 string filter = FilterBox?.Text?.ToLower() ?? "";
                 return string.IsNullOrEmpty(filter) || item.Name.ToLower().Contains(filter);
             }
@@ -192,7 +189,6 @@ namespace EldenRingTool
         {
             string buildName = txtBuildName.Text.Trim();
 
-            // If no name entered, check if a build is selected in the load dropdown
             if (string.IsNullOrEmpty(buildName))
             {
                 var selectedBuild = comboLoadBuild.SelectedItem as string;
@@ -207,7 +203,8 @@ namespace EldenRingTool
 
                     if (result != MessageBoxResult.Yes) return;
 
-                    buildName = selectedBuild; // Use the selected build name
+                    buildName = selectedBuild;
+                    hasUnsavedChanges = false;
                 }
                 else
                 {
@@ -222,8 +219,7 @@ namespace EldenRingTool
                 return;
             }
 
-            // Confirm overwrite if the build already exists
-            if (builds.ContainsKey(buildName) && buildName != (comboLoadBuild.SelectedItem as string))
+            if (builds.ContainsKey(buildName))
             {
                 var result = MessageBox.Show(
                     $"A build named \"{buildName}\" already exists. Overwrite it?",
@@ -234,7 +230,6 @@ namespace EldenRingTool
                 if (result != MessageBoxResult.Yes) return;
             }
 
-            // Save selected items
             var itemsList = SelectedItems.Select(i =>
                 $"{i.Name.Replace("|", "||")}|{i.InfusionName.Replace("|", "||")}|{i.AshOfWarName.Replace("|", "||")}|{i.Level}|{i.Quantity}"
             ).ToList();
@@ -242,9 +237,9 @@ namespace EldenRingTool
             builds[buildName] = itemsList;
             SaveAllBuildsToFile();
             RefreshBuildList();
-            comboLoadBuild.SelectedItem = buildName;
-
             hasUnsavedChanges = false;
+
+            comboLoadBuild.SelectedItem = buildName;
             MessageBox.Show($"Build \"{buildName}\" saved successfully.", "Saved", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
@@ -254,6 +249,46 @@ namespace EldenRingTool
                 kvp.Key.Replace("|", "||") + "|" + string.Join(";", kvp.Value)
             );
             File.WriteAllLines(buildsFile, lines);
+        }
+
+        private void DeleteBuild_Click(object sender, RoutedEventArgs e)
+        {
+            if (comboLoadBuild.SelectedItem == null)
+            {
+                MessageBox.Show("Please select a build from the dropdown to delete.");
+                return;
+            }
+
+            string buildName = comboLoadBuild.SelectedItem.ToString();
+
+            if (!builds.ContainsKey(buildName))
+            {
+                MessageBox.Show($"Build '{buildName}' not found.");
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"Are you sure you want to delete the build '{buildName}'?",
+                "Confirm Delete",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                builds.Remove(buildName);
+
+                // Refresh ComboBox
+                comboLoadBuild.ItemsSource = null;
+                comboLoadBuild.ItemsSource = builds.Keys.ToList();
+
+                // Also clear textbox if it matched
+                if (txtBuildName.Text == buildName)
+                    txtBuildName.Text = "";
+
+                SaveAllBuildsToFile();
+
+                MessageBox.Show($"Build '{buildName}' deleted.");
+            }
         }
 
         private void LoadAllBuildsFromFile()
@@ -314,18 +349,6 @@ namespace EldenRingTool
         {
             comboLoadBuild.ItemsSource = null;
             comboLoadBuild.ItemsSource = builds.Keys.ToList();
-        }
-
-        private void LoadBuild_Click(object sender, RoutedEventArgs e)
-        {
-            var selectedBuild = comboLoadBuild.SelectedItem as string;
-            if (selectedBuild == null)
-            {
-                MessageBox.Show("Please select a valid build.");
-                return;
-            }
-
-            LoadBuild(selectedBuild);
         }
 
         private void LoadBuild(string buildName)
