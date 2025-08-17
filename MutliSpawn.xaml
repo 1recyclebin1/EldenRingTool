@@ -84,17 +84,24 @@
         </StackPanel>
 
         <!-- Spawn Control -->
-        <StackPanel Grid.Row="2" Grid.Column="3" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,10,0,10" Grid.ColumnSpan="3" Height="20px">
-            <Button Content="Spawn All" Click="btnSpawnAll_Click" Width="100" Margin="0,0,10,0"/>
+        <StackPanel Grid.Row="2" Grid.Column="3" Orientation="Vertical" Margin="0,10,0,0">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10" Height="25px">
+                <ComboBox x:Name="comboLoadBuild" ItemsSource="{Binding Builds}" Width="150" Margin="10,0,5,0" SelectionChanged="ComboLoadBuild_SelectionChanged"/>
+                <Button Content="Delete Build" Click="DeleteBuild_Click" Width="100" Margin="5,0"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10" Height="25px">
+                <TextBox x:Name="txtBuildName" Width="150" Margin="10,0,5,0"/>
+                <Button Content="Save Build" Click="SaveBuild_Click" Width="100" Margin="5,0"/>
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,10" Height="20px">
+            <Button Content="Spawn Selected" Click="btnSpawnAll_Click" Width="100" Margin="0,0,10,0"/>
         </StackPanel>
 
         <!-- Bottom Controls -->
-        <StackPanel Grid.Row="3" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,0,0,10" Height="25px">
-            <Label Content="Build Name:" VerticalAlignment="Center"/>
-            <TextBox x:Name="txtBuildName" Width="150" Margin="5,0"/>
-            <Button Content="Save Build" Click="SaveBuild_Click" Width="100" Margin="5,0"/>
-            <ComboBox x:Name="comboLoadBuild" ItemsSource="{Binding Builds}" Width="150" Margin="10,0,5,0" SelectionChanged="ComboLoadBuild_SelectionChanged"/>
-            <Button Content="Delete Build" Click="DeleteBuild_Click" Width="100" Margin="5,0"/>
+        <StackPanel Grid.Row="3" Grid.Column="3" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,10" Grid.ColumnSpan="3" Height="20px">
+            <Button Content="Spawn All" Click="btnSpawnAll_Click" Width="100"/>
         </StackPanel>
  
     </Grid>
