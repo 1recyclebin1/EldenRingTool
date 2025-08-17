@@ -121,6 +121,11 @@ namespace EldenRingTool
             };
         }
 
+        private void ClearFilter_Click(object sender, RoutedEventArgs e)
+        {
+            FilterBox.Text = string.Empty;
+        }
+
         private void AvailableItemsListBox_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             AddButton_Click(sender, e);
@@ -161,6 +166,45 @@ namespace EldenRingTool
             }
 
             hasUnsavedChanges = true;
+        }
+
+        private void QuickSpawn_Click(object sender, RoutedEventArgs e)
+        {
+            Item selectedItem = AvailableList.SelectedItem as Item;
+            if (selectedItem == null)
+            {
+                MessageBox.Show("Please select an item from the list.");
+                return;
+            }
+
+            try
+            {
+                uint level = 0;
+                uint qty = 1;
+                uint infusionId = 0;
+                uint ashOfWarId = 0;
+
+                uint.TryParse(txtLevel.Text, out level);
+                uint.TryParse(txtQuantity.Text, out qty);
+
+                var infusion = ItemDB.Infusions
+                    .FirstOrDefault(x => x.Item1.Equals(comboInfusion.Text, StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrEmpty(infusion.Item1))
+                    infusionId = infusion.Item2;
+
+                var ash = ItemDB.Ashes
+                    .FirstOrDefault(x => x.Item1.Equals(comboAsh.Text, StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrEmpty(ash.Item1))
+                    ashOfWarId = ash.Item2;
+
+                uint itemID = selectedItem.Id + level + infusionId;
+
+                _process.spawnItem(itemID, qty, ashOfWarId);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error spawning item: {ex.Message}");
+            }
         }
 
         private void btnSpawnAll_Click(object sender, RoutedEventArgs e)
