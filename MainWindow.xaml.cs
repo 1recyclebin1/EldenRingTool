@@ -1,28 +1,20 @@
-﻿using System;
+﻿using MiscUtils;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using System.IO;
-using System.Diagnostics;
-using Microsoft.Win32;
-using System.Runtime.InteropServices;
 using System.Windows.Interop;
-using System.Threading;
-using System.Reflection;
-using EldenRingTool.Util;
-using MiscUtils;
-using System.Net.Http.Headers;
-using System.Net.Http;
+using System.Windows.Media;
 
 namespace EldenRingTool
 {
@@ -182,10 +174,10 @@ namespace EldenRingTool
             Closing += MainWindow_Closing;
             Closed += MainWindow_Closed;
             Loaded += MainWindow_Loaded;
-            
-            
 
-            retry:
+
+
+        retry:
             try
             {
                 _process = new ERProcess();
@@ -227,7 +219,7 @@ namespace EldenRingTool
                 _timer.Tick += _timer_Tick;
                 _timer.Interval = TimeSpan.FromSeconds(0.1); //~10hz UI update rate
                 _timer.Start();
-                
+
             }
 
         }
@@ -236,7 +228,7 @@ namespace EldenRingTool
         {
             try
             {
-                var windowInfo = 
+                var windowInfo =
                     $"{Left} " +
                     $"{Top} " +
                     $"{isCompact} " +
@@ -289,7 +281,7 @@ namespace EldenRingTool
                     chkSteamAchieve.IsChecked = bool.Parse(spl[4]);
                     chkMuteMusic.IsChecked = bool.Parse(spl[5]);
                 }
-                
+
                 if (spl.Length >= 9)
                 {
                     RestorePanelVisibility(PlayerPanelControl, PlayerPanel, spl[6]);
@@ -478,7 +470,7 @@ namespace EldenRingTool
                 {//none by default
                 }
             }
-            catch(Exception ex) { Utils.debugWrite(ex.ToString()); }
+            catch (Exception ex) { Utils.debugWrite(ex.ToString()); }
 
             loadWindowState(); //restore last state if saved
 
@@ -619,7 +611,7 @@ namespace EldenRingTool
             var poisetimer = _process.getSetTargetInfo(ERProcess.TargetInfo.POISE_TIMER);
             //Console.WriteLine($"{hp} {hpmax} {poise} {poisemax} {poisetimer}");
             if (double.IsNaN(hp)) { return; }
-            
+
             if (hpBar.Value > hpmax) { hpBar.Value = 0; }
             hpBar.Maximum = hpmax;
             hpBar.Value = hp > 0 ? hp : 0;
@@ -688,7 +680,7 @@ namespace EldenRingTool
             // 99.9% of defenses are multiples of 5, this is probably fine for all
             // Can use below if you want a fidelity of 1%
             //return (int)Math.Round((1.0 - _process.getTargetDefenses(type)) * 100);
-            
+
             return (int)(Math.Round((1.0 - _process.getTargetDefenses(type)) * 100 / 5.0) * 5);
         }
 
@@ -1248,7 +1240,7 @@ namespace EldenRingTool
             if (!File.Exists(getUpdCheckFile()))
             {
                 chkAutoUpdate.IsChecked = true;
-                var t = new Thread(()=>
+                var t = new Thread(() =>
                 {
                     try
                     {
@@ -1367,7 +1359,7 @@ namespace EldenRingTool
             _process.offAndUnFreeze(ERProcess.DebugOpts.EVENT_STOP);
         }
 
-        
+
         private void freeCamOn(object sender, RoutedEventArgs e)
         {
             if (_freeCamFirstActivation || Keyboard.IsKeyDown(Key.LeftShift))
@@ -1383,7 +1375,7 @@ namespace EldenRingTool
             _process.offAndUnFreeze(ERProcess.DebugOpts.FREE_CAM);
         }
 
-        
+
         private void toggleStatsFull(object sender, RoutedEventArgs e)
         {
             if (!isCompact)
@@ -1408,7 +1400,7 @@ namespace EldenRingTool
 
             isCompact = true;
         }
-            
+
         void setFull()
         {
             mainPanel.Visibility = Visibility.Visible;
@@ -1449,9 +1441,9 @@ namespace EldenRingTool
         {
             var dbLocations = File.ReadAllLines(posDbFile());
             var locations = new List<TeleportLocation>();
-            for (int i = 0; i < dbLocations.Length; i++) 
+            for (int i = 0; i < dbLocations.Length; i++)
             {
-                locations.Add(new TeleportLocation(dbLocations[i]));   
+                locations.Add(new TeleportLocation(dbLocations[i]));
             }
 
             var sel = new Selection(locations.ToList<object>(), (x) => { if (x != null) { doGlobalTP((x as TeleportLocation).getCoords()); } }, "Choose a location: ");
@@ -1639,7 +1631,7 @@ namespace EldenRingTool
             DistanceSlider.IsEnabled = false;
             _process.offAndUnFreeze(ERProcess.DebugOpts.TARGETING_VIEW);
         }
-        
+
         private void ReducedTargetingViewOn(object sender, RoutedEventArgs e)
         {
             DistanceSlider.IsEnabled = true;
@@ -1651,7 +1643,7 @@ namespace EldenRingTool
             DistanceSlider.IsEnabled = false;
             _process.ToggleReducedTargetView(false);
         }
-        
+
         private void DistanceSliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             if (DistanceText != null)
@@ -1863,8 +1855,8 @@ namespace EldenRingTool
                 var textBox = dockPanel.Children.OfType<TextBlock>().FirstOrDefault();
                 if (textBox != null)
                 {
-                    textBox.Text = stackPanel.Visibility == Visibility.Visible ? 
-                                                            textBox.Text.Substring(0, textBox.Text.Length - 1) + "▼" : 
+                    textBox.Text = stackPanel.Visibility == Visibility.Visible ?
+                                                            textBox.Text.Substring(0, textBox.Text.Length - 1) + "▼" :
                                                             textBox.Text.Substring(0, textBox.Text.Length - 1) + "▲";
                 }
             }

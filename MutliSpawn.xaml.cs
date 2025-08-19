@@ -2,15 +2,11 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Security.Policy;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Input;
 
 namespace EldenRingTool
 {
@@ -35,11 +31,11 @@ namespace EldenRingTool
             public string Name { get; set; }
             public uint Id { get; set; }
             public int Level { get; set; }
-            public uint InfusionId { get; set; }
-            public string InfusionName { get; set; } 
+            //public uint InfusionId { get; set; }
+            public string InfusionName { get; set; }
 
-            public uint AshOfWarId { get; set; }
-            public string AshOfWarName { get; set; } 
+            //public uint AshOfWarId { get; set; }
+            public string AshOfWarName { get; set; }
             public int Quantity { get; set; }
         }
 
@@ -85,9 +81,11 @@ namespace EldenRingTool
             );
 
             SelectedItems = new ObservableCollection<Item>();
+            SelectedItems.CollectionChanged += SelectedItems_CollectionChanged;
 
             AvailableItemsView = CollectionViewSource.GetDefaultView(AvailableItems);
             AvailableItemsView.Filter = FilterAvailableItems;
+
 
             LoadAllBuildsFromFile();
 
@@ -130,6 +128,12 @@ namespace EldenRingTool
         {
             AddButton_Click(sender, e);
         }
+
+        private void SelectedItems_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            SpawnAllButton.IsEnabled = SelectedItems.Count > 0;
+        }
+
 
         private void AddButton_Click(object sender, RoutedEventArgs e)
         {
@@ -245,7 +249,11 @@ namespace EldenRingTool
                         MessageBoxImage.Question
                     );
 
-                    if (result != MessageBoxResult.Yes) return;
+                    if (result != MessageBoxResult.Yes)
+                    {
+                        txtBuildName.Text = "";
+                        return;
+                    }
 
                     buildName = selectedBuild;
                     hasUnsavedChanges = false;
@@ -271,7 +279,11 @@ namespace EldenRingTool
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question
                 );
-                if (result != MessageBoxResult.Yes) return;
+                if (result != MessageBoxResult.Yes)
+                {
+                    txtBuildName.Text = "";
+                    return;
+                }
             }
 
             var itemsList = SelectedItems.Select(i =>
@@ -284,7 +296,10 @@ namespace EldenRingTool
             hasUnsavedChanges = false;
 
             comboLoadBuild.SelectedItem = buildName;
+
             MessageBox.Show($"Build \"{buildName}\" saved successfully.", "Saved", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            txtBuildName.Text = "";
         }
 
         private void SaveAllBuildsToFile()
@@ -321,13 +336,10 @@ namespace EldenRingTool
             {
                 builds.Remove(buildName);
 
-                // Refresh ComboBox
                 comboLoadBuild.ItemsSource = null;
                 comboLoadBuild.ItemsSource = builds.Keys.ToList();
 
-                // Also clear textbox if it matched
-                if (txtBuildName.Text == buildName)
-                    txtBuildName.Text = "";
+                txtBuildName.Text = "";
 
                 SaveAllBuildsToFile();
 
@@ -361,10 +373,28 @@ namespace EldenRingTool
             RefreshBuildList();
         }
 
+        private void AvailableItems_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (AvailableList.SelectedItem is Item selected)
+            {
+                SingleSpawnButton.Content = "Spawn " + selected.Name;
+                SingleSpawnButton.IsEnabled = true;
+            }
+            else
+            {
+                SingleSpawnButton.IsEnabled = false;
+            }
+        }
+
         private void ComboLoadBuild_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var selectedBuild = comboLoadBuild.SelectedItem as string;
-            if (selectedBuild == null) return;
+            if (selectedBuild == null)
+            {
+                LoadedBuildName.Content = string.Empty;
+                SelectedItems.Clear();
+                return;
+            }
 
             if (hasUnsavedChanges)
             {
@@ -377,7 +407,6 @@ namespace EldenRingTool
 
                 if (result != MessageBoxResult.Yes)
                 {
-                    // Cancel the selection change
                     comboLoadBuild.SelectionChanged -= ComboLoadBuild_SelectionChanged;
                     comboLoadBuild.SelectedItem = e.RemovedItems.Count > 0 ? e.RemovedItems[0] : null;
                     comboLoadBuild.SelectionChanged += ComboLoadBuild_SelectionChanged;
@@ -386,6 +415,8 @@ namespace EldenRingTool
             }
 
             LoadBuild(selectedBuild);
+            LoadedBuildName.Content = "Loaded Build: " + comboLoadBuild.SelectedItem.ToString();
+            txtBuildName.Text = "";
             hasUnsavedChanges = false;
         }
 

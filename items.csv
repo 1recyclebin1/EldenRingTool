@@ -1,47 +1,5 @@
 Name,ID
 Abandoned Merchant's Bell Bearing,400022E9
-About Adding Affinities,400023B0
-About Adding Skills,4000239C
-About Birdseye Telescopes,4000239D
-About Bows,4000238E
-About Competitive Multiplayer,400023A3
-About Containers,400023AF
-About Cooperative Multiplayer,400023A2
-About Crouching,4000238F
-About Death,40002396
-About Dodging,400023B2
-About Fast Travel to Sites of Grace,400023AA
-About Flask of Wondrous Physick,4000239B
-About Guard Counters,40002392
-About Guarding,40002398
-About Guidance of Grace,40002394
-About Horseback Riding,40002395
-About Hunter Multiplayer,400023A5
-About Invasion Multiplayer,400023A4
-About Item Crafting,40002399
-About Materials,400023AE
-About Monument Icon,400023A7
-About Multiplayer,400023EB
-About New Inventory Features,401EA84A
-About Pouches,400023B1
-About Requesting Help from Hunters,400023A8
-About Roundtable Hold,400023AC
-About Sites of Grace,4000238C
-About Skills,400023A9
-About Sorceries and Incantations,4000238D
-About Spiritspring Jumping,4000239E
-About Stakes of Marika,40002391
-About Stance-Breaking,40002390
-About Strengthening Armaments,400023AB
-About Summoning Other Players,400023A1
-About Summoning Pools,400023A6
-About Summoning Spirits,40002397
-About Teardrop Scarabs,400023A0
-About the Map,40002393
-About the Revered Spirit Ash Blessing,401EA849
-About the Scadutree Blessing,401EA848
-About Vanquishing Enemy Groups,4000239F
-About Wielding Armaments,400023B4
 Academy Glintstone Key,40001FAD
 Academy Glintstone Key,40001FEE
 Academy Glintstone Staff,01FA9780
@@ -457,6 +415,7 @@ Black Steel Greathammer,00BF0A40
 Black Steel Greatshield,01EFE920
 Black Steel Twinblade,00A05EB0
 Black Syrup,401EA3D3
+Black Whetblade,4000230E
 Black Wolf Mask,10029810
 Black-Key Bolt,0319EA30
 Blackflame Monk Amon +1,40037AA1
@@ -1329,6 +1288,7 @@ Glintstone Sorcerer Ashes +9,40035399
 Glintstone Sorcerer Ashes,40035390
 Glintstone Staff,01F78A40
 Glintstone Stars,40000FC8
+Glintstone Whetblade,4000230D
 Gloried Attire,104F31D4
 Glovewort Crystal Tear,401EAFB4
 Glovewort Picker's Bell Bearing [1],40002300
@@ -1710,6 +1670,7 @@ Iron Rivet Gauntlets,104C9A28
 Iron Rivet Greaves,104C9A8C
 Iron Roundshield,01CB9840
 Iron Spear,00F66DF0
+Iron Whetblade,4000230A
 Ironjar Aromatic,40000DC0
 Isolated Merchant's Bell Bearing [1],400022DE
 Isolated Merchant's Bell Bearing [2],400022DF
@@ -2561,6 +2522,7 @@ Red Letter,40001FC5
 Red Lightning Pot,401E873C
 Red Thorn Roundshield,01CAD4F0
 Red-Feathered Branchsword,200007F8
+Red-Hot Whetblade,4000230B
 Redflesh Mushroom,401ED2A2
 Redmane Fire Pot,4000012D
 Redmane Greatshield,01EBCA70
@@ -2739,6 +2701,7 @@ Sage Hood,10068FB0
 Sage Robe,10069014
 Sage Trousers,100690DC
 Salza's Hood,104F1A00
+Sanctified Whetblade,4000230C
 Sanctuary Stone,4000513B
 Sanguine Amaryllis,401ED2AC
 Sanguine Noble Hood,1004E200
@@ -3291,8 +3254,45 @@ Zamor Legwraps,101054DC
 Zamor Mask,101053B0
 Zorayas's Letter,4000201D
 Zweihander,003DA540
-Iron Whetblade,4000230A
-Red-Hot Whetblade,4000230B
-Sanctified Whetblade,4000230C
-Glintstone Whetblade,4000230D
-Black Whetblade,4000230E
+About Adding Affinities,400023B0
+About Adding Skills,4000239C
+About Birdseye Telescopes,4000239D
+About Bows,4000238E
+About Competitive Multiplayer,400023A3
+About Containers,400023AF
+About Cooperative Multiplayer,400023A2
+About Crouching,4000238F
+About Death,40002396
+About Dodging,400023B2
+About Fast Travel to Sites of Grace,400023AA
+About Flask of Wondrous Physick,4000239B
+About Guard Counters,40002392
+About Guarding,40002398
+About Guidance of Grace,40002394
+About Horseback Riding,40002395
+About Hunter Multiplayer,400023A5
+About Invasion Multiplayer,400023A4
+About Item Crafting,40002399
+About Materials,400023AE
+About Monument Icon,400023A7
+About Multiplayer,400023EB
+About New Inventory Features,401EA84A
+About Pouches,400023B1
+About Requesting Help from Hunters,400023A8
+About Roundtable Hold,400023AC
+About Sites of Grace,4000238C
+About Skills,400023A9
+About Sorceries and Incantations,4000238D
+About Spiritspring Jumping,4000239E
+About Stakes of Marika,40002391
+About Stance-Breaking,40002390
+About Strengthening Armaments,400023AB
+About Summoning Other Players,400023A1
+About Summoning Pools,400023A6
+About Summoning Spirits,40002397
+About Teardrop Scarabs,400023A0
+About the Map,40002393
+About the Revered Spirit Ash Blessing,401EA849
+About the Scadutree Blessing,401EA848
+About Vanquishing Enemy Groups,4000239F
+About Wielding Armaments,400023B4

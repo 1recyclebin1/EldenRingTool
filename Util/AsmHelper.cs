@@ -38,10 +38,10 @@ namespace EldenRingTool.Util
                 Array.Copy(originOffsetBytes, 0, bytes, destinationIndex, 4);
             }
         }
-        
+
         public static byte[] GetAbsAddressBytes(long address)
             => BitConverter.GetBytes(address);
-        
+
         public static void WriteAbsoluteAddresses(byte[] bytes, (long address, int destinationIndex)[] addresses)
         {
             foreach (var (address, destinationIndex) in addresses)

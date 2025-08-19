@@ -20,9 +20,14 @@
             <TextBox Name="FilterBox" Margin="0 0 0 5" TextChanged="FilterBox_TextChanged" Width="225"/>
             <Button Content="X" Click="ClearFilter_Click" Width="20" Height="20.5" Margin="2,0,0,3.5"/>
         </StackPanel>
-        <!-- Left Panel: Available Items -->
+        
+        <StackPanel Grid.Column="2" Grid.Row="0" Orientation="Horizontal" >
+            <Label x:Name="LoadedBuildName"></Label>
+        </StackPanel>
+
         <StackPanel Grid.Column="0" Grid.Row="1">
-            <ListBox x:Name="AvailableList" Height="300"
+            <ListBox x:Name="AvailableList" Height="300" 
+                     SelectionChanged="AvailableItems_SelectionChanged"
                      ItemsSource="{Binding AvailableItems}"
                      DisplayMemberPath="Name"
                      MouseDoubleClick="AvailableItemsListBox_MouseDoubleClick"/>
@@ -62,6 +67,7 @@
         <!-- Right Panel: Selected Items -->
         <StackPanel Grid.Column="2" Grid.Row="1">
             <ListBox x:Name="SelectedList" 
+                     SelectionMode="Extended"
                      ItemsSource="{Binding SelectedItems}"
                      Height="300">
                 <ListBox.ItemTemplate>
@@ -85,6 +91,10 @@
         </StackPanel>
 
         <!-- Spawn Control -->
+        <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,0,0,10" Height="20px">
+            <Button x:Name="SingleSpawnButton" Content="Spawn" Click="QuickSpawn_Click" MinWidth="50" Margin="0,0,10,0" Padding="10,0" IsEnabled="False"/>
+        </StackPanel>
+
         <StackPanel Grid.Row="2" Grid.Column="3" Orientation="Vertical" Margin="0,10,0,0">
             <StackPanel Orientation="Horizontal" Margin="0,0,0,10" Height="25px">
                 <ComboBox x:Name="comboLoadBuild" ItemsSource="{Binding Builds}" Width="150" Margin="10,0,5,0" SelectionChanged="ComboLoadBuild_SelectionChanged"/>
@@ -96,13 +106,9 @@
             </StackPanel>
         </StackPanel>
 
-        <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,0,0,10" Height="20px">
-            <Button Content="Spawn Selected" Click="QuickSpawn_Click" Width="100" Margin="0,0,10,0"/>
-        </StackPanel>
-
         <!-- Bottom Controls -->
         <StackPanel Grid.Row="3" Grid.Column="3" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,0,0,10" Grid.ColumnSpan="3" Height="20px">
-            <Button Content="Spawn All" Click="btnSpawnAll_Click" Width="100"/>
+            <Button x:Name="SpawnAllButton" Content="Spawn All" Click="btnSpawnAll_Click" Width="100" IsEnabled="False"/>
         </StackPanel>
  
     </Grid>

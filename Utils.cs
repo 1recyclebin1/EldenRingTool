@@ -9,8 +9,6 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Windows;
 
 namespace MiscUtils
 {
@@ -150,7 +148,7 @@ namespace MiscUtils
             {
                 string exename = @"eldenring.exe";
                 string path = exename;
-                
+
                 if (File.Exists(path)) // prioritize running Elden Ring from the folder this exe is in.
                 {
                     Utils.debugWrite("Found Elden Ring exe at: " + path);

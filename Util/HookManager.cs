@@ -8,14 +8,14 @@ namespace EldenRingTool.Util
     {
         private readonly ERProcess _erProcess;
         private readonly Dictionary<long, HookData> _hookRegistry = new Dictionary<long, HookData>();
-        
+
         private class HookData
         {
             public long OriginAddr { get; set; }
             public long CaveAddr { get; set; }
             public byte[] OriginalBytes { get; set; }
         }
-        
+
         public HookManager(ERProcess erProcess)
         {
             _erProcess = erProcess;
@@ -25,7 +25,7 @@ namespace EldenRingTool.Util
         public long InstallHook(long codeLoc, long origin, byte[] originalBytes)
         {
             byte[] hookBytes = GetHookBytes(originalBytes.Length, codeLoc, origin);
-            _erProcess.WriteBytes((IntPtr) origin, hookBytes);
+            _erProcess.WriteBytes((IntPtr)origin, hookBytes);
             _hookRegistry[codeLoc] = new HookData
             {
                 CaveAddr = codeLoc,
@@ -57,7 +57,7 @@ namespace EldenRingTool.Util
             {
                 return;
             }
-            
+
             IntPtr originAddrPtr = (IntPtr)hookToUninstall.OriginAddr;
             _erProcess.WriteBytes(originAddrPtr, hookToUninstall.OriginalBytes);
             _hookRegistry.Remove(key);

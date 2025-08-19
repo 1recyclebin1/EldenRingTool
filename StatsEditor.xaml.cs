@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 
 namespace EldenRingTool
 {
@@ -80,14 +79,16 @@ namespace EldenRingTool
 
         private void Button_DecreaseStat(TextBox txt)
         {
-            if (int.TryParse(txt.Text, out int value)) { 
+            if (int.TryParse(txt.Text, out int value))
+            {
                 txt.Text = (--value).ToString();
             }
         }
 
         private void Button_IncreaseStat(TextBox txt)
         {
-            if (int.TryParse(txt.Text, out int value)) { 
+            if (int.TryParse(txt.Text, out int value))
+            {
                 txt.Text = (++value).ToString();
             }
         }
