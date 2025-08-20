@@ -47,7 +47,7 @@
                 </Grid.RowDefinitions>
 
                 <Label Grid.Row="0" Grid.Column="0">Level:</Label>
-                <TextBox Grid.Row="1" Grid.Column="0" Width="30px" x:Name="txtLevel" TextAlignment="Center">0</TextBox>
+                <ComboBox Grid.Row="1" Grid.Column="0" Width="45px" x:Name="comboLevel" SelectedIndex="0" Margin="0,0,5,0"></ComboBox>
                 <Label Grid.Row="0" Grid.Column="1">Infusion:</Label>
                 <ComboBox Grid.Row="1" Grid.Column="1" x:Name="comboInfusion" ItemsSource="{Binding Infusions}" DisplayMemberPath="Name" SelectedValuePath="Id" SelectedIndex="0" Margin="0,0,5,0"></ComboBox>
                 <Label Grid.Row="0" Grid.Column="2">Ash of War:</Label>

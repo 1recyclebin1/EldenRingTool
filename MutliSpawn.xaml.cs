@@ -7,6 +7,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using static EldenRingTool.ERProcess;
 
 namespace EldenRingTool
 {
@@ -31,12 +32,10 @@ namespace EldenRingTool
             public string Name { get; set; }
             public uint Id { get; set; }
             public int Level { get; set; }
-            //public uint InfusionId { get; set; }
             public string InfusionName { get; set; }
-
-            //public uint AshOfWarId { get; set; }
             public string AshOfWarName { get; set; }
             public int Quantity { get; set; }
+            public ERProcess.ItemCategory Category { get; set; }
         }
 
         public class Lookup
@@ -60,7 +59,8 @@ namespace EldenRingTool
                 ItemDB.Items.Select(item => new Item
                 {
                     Name = item.Item1,
-                    Id = item.Item2
+                    Id = item.Item2,
+                    Category = item.Item3
                 })
             );
 
@@ -143,7 +143,7 @@ namespace EldenRingTool
                 {
                     Name = selected.Name,
                     Id = selected.Id,
-                    Level = int.TryParse(txtLevel.Text, out int lvl) ? lvl : 0,
+                    Level = int.TryParse(comboLevel.Text, out int lvl) ? lvl : 0,
                     Quantity = int.TryParse(txtQuantity.Text, out int qty) ? qty : 1,
                     InfusionName = comboInfusion.SelectedItem is Lookup inf ? inf.Name : "Normal",
                     AshOfWarName = comboAsh.SelectedItem is Lookup ash ? ash.Name : "Default"
@@ -152,8 +152,8 @@ namespace EldenRingTool
                 SelectedItems.Add(newItem);
 
                 // Reset inputs to defaults
-                txtLevel.Text = "0";
                 txtQuantity.Text = "1";
+                comboLevel.SelectedIndex = 0;
                 comboInfusion.SelectedIndex = 0;
                 comboAsh.SelectedIndex = 0;
             }
@@ -188,7 +188,7 @@ namespace EldenRingTool
                 uint infusionId = 0;
                 uint ashOfWarId = 0;
 
-                uint.TryParse(txtLevel.Text, out level);
+                uint.TryParse(comboLevel.Text, out level);
                 uint.TryParse(txtQuantity.Text, out qty);
 
                 var infusion = ItemDB.Infusions
@@ -379,6 +379,27 @@ namespace EldenRingTool
             {
                 SingleSpawnButton.Content = "Spawn " + selected.Name;
                 SingleSpawnButton.IsEnabled = true;
+
+                int maxValue;
+                switch (selected.Category)
+                {
+                    case ItemCategory.NONE:
+                        maxValue = 0;
+                        break;
+                    case ItemCategory.SMITHING:
+                        maxValue = 25;
+                        break;
+                    case ItemCategory.SOMBER:
+                        maxValue = 10;
+                        break;
+                    default:
+                        maxValue = 0;
+                        break;
+                }
+
+                comboLevel.ItemsSource = Enumerable.Range(0, maxValue + 1);
+                comboLevel.SelectedIndex = 0;
+                comboLevel.IsEnabled = (selected.Category != ItemCategory.NONE); // disable if non-weapon
             }
             else
             {

@@ -49,15 +49,15 @@ namespace EldenRingTool
                 (string, uint) item = ("", 0);
                 if (itemExact.Count() > 0)
                 {
-                    item = itemExact.First();
+                    //item = itemExact.First();
                 }
                 else if (itemStart.Count() > 0)
                 {
-                    item = itemStart.First();
+                    //item = itemStart.First();
                 }
                 else if (itemContain.Count() > 0)
                 {
-                    item = itemContain.First();
+                    //item = itemContain.First();
                 }
                 else
                 {

@@ -3,11 +3,13 @@ using MiscUtils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
+using static EldenRingTool.ERProcess;
 
 namespace EldenRingTool
 {
@@ -334,6 +336,13 @@ namespace EldenRingTool
             MADNESS, MADNESS_MAX,
             STANDARD, SLASH, STRIKE, PIERCE,
             MAGIC, FIRE, LIGHTNING, HOLY,
+        }
+
+        public enum ItemCategory 
+        { 
+            NONE,
+            SMITHING,
+            SOMBER
         }
 
         const long SANE_MINIMUM = 0x700000000000;
@@ -2147,14 +2156,14 @@ namespace EldenRingTool
 
     public class ItemDB
     {
-        static List<(string, uint)> items = new System.Collections.Generic.List<(string, uint)>();
-        static List<(string, uint)> infusions = new System.Collections.Generic.List<(string, uint)>();
-        static List<(string, uint)> ashes = new System.Collections.Generic.List<(string, uint)>();
+        static List<(string, uint, ItemCategory)> items = new System.Collections.Generic.List<(string, uint, ItemCategory)>();
+        static List<(string, uint, ItemCategory)> infusions = new System.Collections.Generic.List<(string, uint, ItemCategory)>();
+        static List<(string, uint, ItemCategory)> ashes = new System.Collections.Generic.List<(string, uint, ItemCategory)>();
         static bool _loaded = false;
 
-        static List<(string, uint)> importNameIDCSV(string name, System.Globalization.NumberStyles numType = System.Globalization.NumberStyles.HexNumber)
+        static List<(string, uint, ItemCategory)> importNameIDCSV(string name, System.Globalization.NumberStyles numType = System.Globalization.NumberStyles.HexNumber)
         {
-            var ret = new List<(string, uint)>();
+            var ret = new List<(string, uint, ItemCategory)>();
             try
             {
                 var assembly = Assembly.GetExecutingAssembly();
@@ -2162,17 +2171,30 @@ namespace EldenRingTool
                 using (Stream stream = assembly.GetManifestResourceStream(resourceName))
                 using (StreamReader reader = new StreamReader(stream))
                 {
-                    var header = reader.ReadLine();
-                    var headerSplit = header.Split(',');
+                    var header = reader.ReadLine(); // throw away header
                     string line = "";
                     while ((line = reader.ReadLine()) != null)
                     {
-                        var lastCommaPos = line.LastIndexOf(',');
-                        if (lastCommaPos < 0) { continue; }
-                        var nm = line.Substring(0, lastCommaPos);
-                        var idStr = line.Substring(lastCommaPos + 1);
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+
+                        // get category
+                        int lastComma = line.LastIndexOf(',');
+                        if (lastComma < 0) continue;
+                        var category = Enum.TryParse<ItemCategory>(line.Substring(lastComma + 1), ignoreCase: true, out var parsed)
+                            ? parsed
+                            : ItemCategory.NONE;
+
+                        // get id
+                        string beforeLast = line.Substring(0, lastComma);
+                        int secondLastComma = beforeLast.LastIndexOf(',');
+                        if (secondLastComma < 0) continue;
+                        string idStr = beforeLast.Substring(secondLastComma + 1).Trim();
                         var id = uint.Parse(idStr, numType);
-                        ret.Add((nm, id));
+
+                        // get name
+                        string itemName = beforeLast.Substring(0, secondLastComma).Trim();
+
+                        ret.Add((itemName, id, category));
                     }
                 }
                 return ret;
@@ -2186,12 +2208,17 @@ namespace EldenRingTool
         {
             if (_loaded) { return; }
 
-            ashes = importNameIDCSV("ashes.csv"); //TODO: just init with Default and then take from item list
-            infusions = importNameIDCSV("infusions.csv", System.Globalization.NumberStyles.Number);
             var itemsTemp = importNameIDCSV("items.csv");
+            infusions = importNameIDCSV("infusions.csv", System.Globalization.NumberStyles.Number);
             //sort order can be a bit jank so just re sort it now
             itemsTemp.Sort((x, y) =>
             {
+                bool xIsAbout = x.Item1.StartsWith("About ", StringComparison.OrdinalIgnoreCase);
+                bool yIsAbout = y.Item1.StartsWith("About ", StringComparison.OrdinalIgnoreCase);
+
+                if (xIsAbout && !yIsAbout) return 1;
+                if (!xIsAbout && yIsAbout) return -1;
+
                 if (x.Item1 == y.Item1) { return x.Item2.CompareTo(y.Item2); }
                 return x.Item1.CompareTo(y.Item1);
             });
@@ -2215,12 +2242,22 @@ namespace EldenRingTool
                     dupeCount[name] = ++count;
                     name = $"{name} #{count}";
                 }
-                items.Add((name, item.Item2));
+                items.Add((name, item.Item2, item.Item3));
             }
+
+            ashes = items.Where(x => x.Item1.StartsWith("Ash of War: ", StringComparison.OrdinalIgnoreCase))
+                .Select(x =>
+                {
+                    string nameWithoutPrefix = x.Item1.Substring("Ash of War: ".Length).Trim();
+                    return (nameWithoutPrefix, x.Item2, x.Item3);
+                })
+                .ToList();
+            ashes.Insert(0, ("Default", 0xFFFFFFFF, ItemCategory.NONE));
 
             _loaded = true;
         }
-        public static List<(string, uint)> Items
+
+        public static List<(string, uint, ItemCategory)> Items
         {
             get
             {
@@ -2228,7 +2265,7 @@ namespace EldenRingTool
                 return items;
             }
         }
-        public static List<(string, uint)> Infusions
+        public static List<(string, uint, ItemCategory)> Infusions
         {
             get
             {
@@ -2236,7 +2273,7 @@ namespace EldenRingTool
                 return infusions;
             }
         }
-        public static List<(string, uint)> Ashes
+        public static List<(string, uint, ItemCategory)> Ashes
         {
             get
             {
