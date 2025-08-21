@@ -34,8 +34,8 @@
                         <CheckBox Checked="oneShotOn" Unchecked="oneShotOff" Margin="13,0,0 ,0" x:Name="chkOneShot" Content="One-Shot"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                        <Button Click="spawnItem" Content="Spawn Item" Margin="1,0,5,0"/>
-                        <Button Click="multiSpawn" Content="Item Sets" Margin="1,0,5,0"/>
+                        <Button Click="spawnItem" Content="Spawn Item" Margin="1,0,5,0" Visibility="Collapsed"/>
+                        <Button Click="multiSpawn" Content="Spawn Items" Margin="1,0,5,0"/>
                         <Button Click="editStats" Margin="1,0,5,0" Content="Edit Stats"/>
                         <Button Click="addSouls" Content="Add 1M Runes" Margin="1,0,5,0" RenderTransformOrigin="1.746,-20.477"/>
                         <Button Click="btnSetPlayerHP_Click" x:Name="btnSetPlayerHP" Content="Set HP" Margin="1,0,5,0"/>
@@ -275,21 +275,21 @@
                 <StackPanel x:Name="defensesPanel" Visibility="Collapsed">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="40px"/>   
-                            <ColumnDefinition Width="40px"/>   
-                            <ColumnDefinition Width="35px" />  
-                            <ColumnDefinition Width="40px"/>   
-                            <ColumnDefinition Width="40px"/>   
-                            <ColumnDefinition Width="40px"/>   
-                            <ColumnDefinition Width="55px" />     
-                            <ColumnDefinition Width="40px"/>   
+                            <ColumnDefinition Width="40px"/>
+                            <ColumnDefinition Width="40px"/>
+                            <ColumnDefinition Width="35px" />
+                            <ColumnDefinition Width="40px"/>
+                            <ColumnDefinition Width="40px"/>
+                            <ColumnDefinition Width="40px"/>
+                            <ColumnDefinition Width="55px" />
+                            <ColumnDefinition Width="40px"/>
                         </Grid.ColumnDefinitions>
 
                         <Grid.RowDefinitions>
                             <RowDefinition Height="*" />
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                    
+
                         <TextBlock Grid.Row="0" Grid.Column="0" x:Name="strikeText" HorizontalAlignment="Left" Margin="2,0">Strike:</TextBlock>
                         <TextBlock Grid.Row="0" Grid.Column="1" x:Name="strikeVal" Margin="2,0">--</TextBlock>
                         <TextBlock Grid.Row="0" Grid.Column="2" x:Name="slashText" HorizontalAlignment="Left">Slash:</TextBlock>
@@ -324,13 +324,15 @@
                 <!--<Button FontSize="10" Click="toggleResists" x:Name="resistsToggle" Margin="5,0">Toggle Resists</Button>-->
                 <Button FontSize="10" Click="toggleCoords" x:Name="coordsToggle" Margin="5,0">Toggle Coords</Button>
             </StackPanel>
-            <Grid Margin="0,0">
+            <Grid x:Name="BottomPanelButtons" Margin="0,0">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="98*"/>
+                    <ColumnDefinition Width="17*"/>
+                    <ColumnDefinition Width="57*"/>
+                    <ColumnDefinition Width="173*"/>
                 </Grid.ColumnDefinitions>
-                <Button Click="doQuitout" Height="40" x:Name="quitoutButton" Grid.Column="0">Instant Quitout</Button>
-                <Button Click="doSave" Height="40" x:Name="saveButton" Grid.Column="1">Force Save</Button>
+                <Button Click="doQuitout" Height="40" x:Name="quitoutButton" Grid.Column="0" Grid.ColumnSpan="3">Instant Quitout</Button>
+                <Button Click="doSave" Height="40" x:Name="saveButton" Grid.Column="3">Quick Save</Button>
             </Grid>
         </StackPanel>
     </DockPanel>

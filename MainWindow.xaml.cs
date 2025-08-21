@@ -1395,7 +1395,7 @@ namespace EldenRingTool
             mainPanel.Visibility = Visibility.Collapsed;
 
             freezeHPPanel.Visibility = Visibility.Collapsed;
-            quitoutButton.Visibility = Visibility.Collapsed;
+            BottomPanelButtons.Visibility = Visibility.Collapsed;
             updatePanel.Visibility = Visibility.Collapsed;
 
             isCompact = true;
@@ -1406,7 +1406,7 @@ namespace EldenRingTool
             mainPanel.Visibility = Visibility.Visible;
 
             freezeHPPanel.Visibility = Visibility.Visible;
-            quitoutButton.Visibility = Visibility.Visible;
+            BottomPanelButtons.Visibility = Visibility.Visible;
             updatePanel.Visibility = Visibility.Visible;
 
             isCompact = false;
