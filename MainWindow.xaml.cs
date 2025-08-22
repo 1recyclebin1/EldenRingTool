@@ -22,17 +22,17 @@ namespace EldenRingTool
     {
         //TODO: reorganise a bit.
 
-        [DllImport("User32.dll")]
-        private static extern bool RegisterHotKey(
-            [In] IntPtr hWnd,
-            [In] int id,
-            [In] uint fsModifiers,
-            [In] uint vk);
+        //[DllImport("User32.dll")]
+        //private static extern bool RegisterHotKey(
+        //    [In] IntPtr hWnd,
+        //    [In] int id,
+        //    [In] uint fsModifiers,
+        //    [In] uint vk);
 
-        [DllImport("User32.dll")]
-        private static extern bool UnregisterHotKey(
-            [In] IntPtr hWnd,
-            [In] int id);
+        //[DllImport("User32.dll")]
+        //private static extern bool UnregisterHotKey(
+        //    [In] IntPtr hWnd,
+        //    [In] int id);
 
         const int WM_HOTKEY = 0x0312;
 
@@ -107,7 +107,8 @@ namespace EldenRingTool
         Dictionary<string, HOTKEY_ACTIONS> actionMap = new Dictionary<string, HOTKEY_ACTIONS>();
         Dictionary<string, Key> keyMap = new Dictionary<string, Key>();
 
-        Dictionary<int, List<HotkeyAction>> registeredHotkeys = new Dictionary<int, List<HotkeyAction>>();
+        Dictionary<Tuple<Key, Modifiers>, List<HotkeyAction>> registeredHotkeys =
+            new Dictionary<Tuple<Key, Modifiers>, List<HotkeyAction>>();
 
         (float, float, float) lastPos = (0, 0, 0);
         (float, float, float) diffNormalisedLpf = (0, 0, 0);
@@ -304,6 +305,38 @@ namespace EldenRingTool
         }
 
         //TODO: move hotkey stuff to utils?
+        private IntPtr _hookID = IntPtr.Zero;
+        private LowLevelKeyboardProc _proc;
+
+        private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+        private static IntPtr SetHook(LowLevelKeyboardProc proc)
+        {
+            using (var curProcess = Process.GetCurrentProcess())
+            using (var curModule = curProcess.MainModule)
+            {
+                return SetWindowsHookEx(WH_KEYBOARD_LL, proc,
+                    GetModuleHandle(curModule.ModuleName), 0);
+            }
+        }
+
+        private const int WH_KEYBOARD_LL = 13;
+        private const int WM_KEYDOWN = 0x0100;
+        private const int WM_SYSKEYDOWN = 0x0104;
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn,
+            IntPtr hMod, uint dwThreadId);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr GetModuleHandle(string lpModuleName);
 
         void setUpMapsForHotkeys()
         {
@@ -377,15 +410,15 @@ namespace EldenRingTool
                 int i = 0;
                 foreach (var kvp in hotkeyMap)
                 {
-                    registeredHotkeys.Add(i, kvp.Value);
-                    RegisterHotKey(new WindowInteropHelper(this).Handle, i, (uint)kvp.Key.Item2, (uint)KeyInterop.VirtualKeyFromKey(kvp.Key.Item1));
-                    var debugStr = $"Hotkey {i} set: {kvp.Key} ->";
+                    var tuple = Tuple.Create(kvp.Key.Item1, kvp.Key.Item2);
+                    registeredHotkeys[tuple] = kvp.Value;
+
+                    var debugStr = $"Hotkey set: {kvp.Key} ->";
                     foreach (var act in kvp.Value)
                     {
                         debugStr += " " + act.ToString();
                     }
                     Utils.debugWrite(debugStr);
-                    i++;
                 }
                 btnHotkeys.Foreground = registeredHotkeys.Count > 0 ? Brushes.Blue : Brushes.Black;
                 return true;
@@ -396,10 +429,6 @@ namespace EldenRingTool
 
         void clearRegisteredHotkeys()
         {
-            foreach (var h in registeredHotkeys)
-            {
-                UnregisterHotKey(new WindowInteropHelper(this).Handle, h.Key);
-            }
             registeredHotkeys.Clear();
         }
 
@@ -445,10 +474,13 @@ namespace EldenRingTool
         {
             try
             {
+                _proc = HookCallback;
+                _hookID = SetHook(_proc);
+
                 //register for message passing
-                var source = PresentationSource.FromVisual(this as Visual) as HwndSource;
-                if (null == source) { Utils.debugWrite("Could not make hwnd source"); }
-                source.AddHook(WndProc);
+                //var source = PresentationSource.FromVisual(this as Visual) as HwndSource;
+                //if (null == source) { Utils.debugWrite("Could not make hwnd source"); }
+                //source.AddHook(WndProc);
 
                 //hotkeys
                 setUpMapsForHotkeys();
@@ -477,28 +509,34 @@ namespace EldenRingTool
             maybeDoUpdateCheck();
         }
 
-        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            if (msg == WM_HOTKEY)
+            if (nCode >= 0 && (wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN))
             {
-                int id = wParam.ToInt32();
-                Utils.debugWrite($"Got hotkey id {id}");
-                if (!registeredHotkeys.ContainsKey(id))
+                int vkCode = Marshal.ReadInt32(lParam);
+                var key = (Key)KeyInterop.KeyFromVirtualKey(vkCode);
+
+                // gather current modifiers
+                var mods = Modifiers.NO_MOD;
+                if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+                    mods |= Modifiers.CTRL;
+                if (Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt))
+                    mods |= Modifiers.ALT;
+                if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
+                    mods |= Modifiers.SHIFT;
+                if (Keyboard.IsKeyDown(Key.LWin) || Keyboard.IsKeyDown(Key.RWin))
+                    mods |= Modifiers.WIN;
+
+                var tuple = Tuple.Create(key, mods);
+
+                if (registeredHotkeys.ContainsKey(tuple))
                 {
-                    Utils.debugWrite($"Invalid hotkey {id}");
-                }
-                else
-                {
-                    var actList = registeredHotkeys[id];
-                    foreach (var act in actList)
-                    {
-                        Utils.debugWrite($"Doing action {act}");
-                        doAct(act);
-                    }
+                    foreach (var act in registeredHotkeys[tuple])
+                        doAct(act); // same switch as before
                 }
             }
 
-            return IntPtr.Zero;
+            return CallNextHookEx(_hookID, nCode, wParam, lParam);
         }
 
         void doAct(HotkeyAction action)
@@ -767,7 +805,20 @@ namespace EldenRingTool
 
         private void MainWindow_Closed(object sender, EventArgs e)
         {
-            Dispose(true);
+            try
+            {
+                if (_hookID != IntPtr.Zero)
+                {
+                    UnhookWindowsHookEx(_hookID);
+                    _hookID = IntPtr.Zero;
+                }
+
+                registeredHotkeys.Clear();
+            }
+            catch (Exception ex)
+            {
+                Utils.debugWrite("Error unhooking keyboard: " + ex);
+            }
         }
 
         private void colMeshAOn(object sender, RoutedEventArgs e)
