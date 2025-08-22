@@ -635,9 +635,23 @@ namespace EldenRingTool
             GetWindowThreadProcessId(hwnd, out uint pid);
             try
             {
-                var proc = Process.GetProcessById((int)pid).ProcessName.ToLower() + ".exe";
-                var retval = proc == "eldenring.exe" || proc == "eldenringtool.exe";
-                return retval;
+                var procName = Process.GetProcessById((int)pid).ProcessName.ToLower() + ".exe";
+                bool isTargetExe = procName == "eldenring.exe" || procName == "eldenringtool.exe";
+
+                if (!isTargetExe)
+                    return false;
+
+                if (hwnd == new WindowInteropHelper(this).Handle)
+                    return true; 
+
+                foreach (Window owned in this.OwnedWindows)
+                {
+                    var ownedHwnd = new WindowInteropHelper(owned).Handle;
+                    if (hwnd == ownedHwnd)
+                        return false; 
+                }
+
+                return true;
             }
             catch
             {
