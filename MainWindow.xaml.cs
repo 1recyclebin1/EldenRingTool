@@ -516,7 +516,7 @@ namespace EldenRingTool
 
                 var tuple = Tuple.Create(key, mods);
 
-                if (registeredHotkeys.ContainsKey(tuple) && IsTargetAppFocused("eldenring.exe"))
+                if (registeredHotkeys.ContainsKey(tuple) && IsTargetAppFocused())
                 {
                     foreach (var act in registeredHotkeys[tuple])
                         doAct(act); 
@@ -627,7 +627,7 @@ namespace EldenRingTool
             }
         }
 
-        private bool IsTargetAppFocused(string exeName)
+        private bool IsTargetAppFocused()
         {
             IntPtr hwnd = GetForegroundWindow();
             if (hwnd == IntPtr.Zero) return false;
@@ -635,8 +635,8 @@ namespace EldenRingTool
             GetWindowThreadProcessId(hwnd, out uint pid);
             try
             {
-                var proc = Process.GetProcessById((int)pid);
-                var retval = string.Equals(proc.ProcessName + ".exe", exeName, StringComparison.OrdinalIgnoreCase);
+                var proc = Process.GetProcessById((int)pid).ProcessName.ToLower() + ".exe";
+                var retval = proc == "eldenring.exe" || proc == "eldenringtool.exe";
                 return retval;
             }
             catch
