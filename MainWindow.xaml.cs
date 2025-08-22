@@ -22,19 +22,29 @@ namespace EldenRingTool
     {
         //TODO: reorganise a bit.
 
-        //[DllImport("User32.dll")]
-        //private static extern bool RegisterHotKey(
-        //    [In] IntPtr hWnd,
-        //    [In] int id,
-        //    [In] uint fsModifiers,
-        //    [In] uint vk);
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
 
-        //[DllImport("User32.dll")]
-        //private static extern bool UnregisterHotKey(
-        //    [In] IntPtr hWnd,
-        //    [In] int id);
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
-        const int WM_HOTKEY = 0x0312;
+        private const int WH_KEYBOARD_LL = 13;
+        private const int WM_KEYDOWN = 0x0100;
+        private const int WM_SYSKEYDOWN = 0x0104;
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn,
+            IntPtr hMod, uint dwThreadId);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr GetModuleHandle(string lpModuleName);
 
         [Flags]
         public enum Modifiers
@@ -320,24 +330,6 @@ namespace EldenRingTool
             }
         }
 
-        private const int WH_KEYBOARD_LL = 13;
-        private const int WM_KEYDOWN = 0x0100;
-        private const int WM_SYSKEYDOWN = 0x0104;
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn,
-            IntPtr hMod, uint dwThreadId);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool UnhookWindowsHookEx(IntPtr hhk);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
-
-        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern IntPtr GetModuleHandle(string lpModuleName);
-
         void setUpMapsForHotkeys()
         {
             foreach (var mod in Enum.GetValues(typeof(Modifiers)))
@@ -477,11 +469,6 @@ namespace EldenRingTool
                 _proc = HookCallback;
                 _hookID = SetHook(_proc);
 
-                //register for message passing
-                //var source = PresentationSource.FromVisual(this as Visual) as HwndSource;
-                //if (null == source) { Utils.debugWrite("Could not make hwnd source"); }
-                //source.AddHook(WndProc);
-
                 //hotkeys
                 setUpMapsForHotkeys();
 
@@ -529,10 +516,10 @@ namespace EldenRingTool
 
                 var tuple = Tuple.Create(key, mods);
 
-                if (registeredHotkeys.ContainsKey(tuple))
+                if (registeredHotkeys.ContainsKey(tuple) && IsTargetAppFocused("eldenring.exe"))
                 {
                     foreach (var act in registeredHotkeys[tuple])
-                        doAct(act); // same switch as before
+                        doAct(act); 
                 }
             }
 
@@ -637,6 +624,24 @@ namespace EldenRingTool
                 case HOTKEY_ACTIONS.SPELLS: _process.openMenuByName(_process.MENUS[5]); break;
                 case HOTKEY_ACTIONS.QUICK_SAVE: _process.ForceSave(); break;
                 default: Utils.debugWrite("Action not handled: " + act.ToString()); break;
+            }
+        }
+
+        private bool IsTargetAppFocused(string exeName)
+        {
+            IntPtr hwnd = GetForegroundWindow();
+            if (hwnd == IntPtr.Zero) return false;
+
+            GetWindowThreadProcessId(hwnd, out uint pid);
+            try
+            {
+                var proc = Process.GetProcessById((int)pid);
+                var retval = string.Equals(proc.ProcessName + ".exe", exeName, StringComparison.OrdinalIgnoreCase);
+                return retval;
+            }
+            catch
+            {
+                return false;
             }
         }
 
