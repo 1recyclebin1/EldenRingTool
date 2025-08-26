@@ -190,6 +190,9 @@
                         <Button Click="flags" Margin="5,0,0,0" Content="Flags"/>
                         <Button Click="setClearCount" Margin="5,0,0,0" Content="NG+"/>
                     </StackPanel>
+                    <StackPanel>
+                        <Button Click="unlockGraces" Margin="5,0,0,0" Content="Unlock Graces"/>
+                    </StackPanel>
                 </StackPanel>
                 <DockPanel x:Name="QoLPanelControl" Height="16" MouseLeftButtonDown="dockPanel_MouseLeftButtonDown" Tag="{Binding ElementName=QoLPanel}">
                     <TextBlock Text="QoL ▼" Margin="2,0,2,0" FontWeight="Bold"/>
