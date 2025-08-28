@@ -94,6 +94,11 @@ namespace EldenRingTool
             RemoveGraceFromSelected();
         }
 
+        private void AvailableGraces_SelectedItemChanged(object sender, RoutedEventArgs e)
+        {
+            ActivateSelectedButton.IsEnabled = (AvailableGracesTree.SelectedItem is Grace g);
+        }
+
         private void RemoveGraceFromSelected()
         {
             if (SelectedGracesList.SelectedItem is Grace g)
@@ -124,13 +129,29 @@ namespace EldenRingTool
         {
             if (AvailableGracesTree.SelectedItem is Grace g)
             {
-                _process.getSetEventFlag(g.ID, true);
-                if (g.Area.ToLower() == "Ainsel River" ||
-                    g.Area.ToLower() == "Nokron, Eternal City" ||
-                    g.Area.ToLower() == "Deeproot Depths")
+                UnlockGrace(g);
+            }
+        }
+
+        private void ActivateGroup_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (var selected in SelectedGraces)
+            {
+                if (selected is Grace)
                 {
-                    _process.getSetEventFlag(82001, true); // underground map -- force
+                    UnlockGrace(selected);            
                 }
+            }
+        }
+
+        private void UnlockGrace(Grace g)
+        {
+            _process.getSetEventFlag(g.ID, true);
+            if (g.Area == "Ainsel River" ||
+                g.Area == "Nokron, Eternal City" ||
+                g.Area == "Deeproot Depths")
+            {
+                _process.getSetEventFlag(82001, true); // underground map -- force
             }
         }
 
