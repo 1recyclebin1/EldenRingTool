@@ -1928,7 +1928,13 @@ namespace EldenRingTool
 
         private void unlockGraces(object sender, RoutedEventArgs e)
         {
-            var unlockGraces = new UnlockGraces();
+            var main = this;
+            var unlockGraces = new UnlockGraces(_process);
+
+            unlockGraces.WindowStartupLocation = WindowStartupLocation.Manual;
+            unlockGraces.Left = main.Left + main.Width + 10; 
+            unlockGraces.Top = main.Top;
+
             unlockGraces.Owner = this;
             unlockGraces.Show();
         }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -12,6 +13,8 @@ namespace EldenRingTool
     {
         public ObservableCollection<AreaGroup> AvailableGracesGrouped { get; set; } = new ObservableCollection<AreaGroup>();
         public ObservableCollection<Grace> SelectedGraces { get; set; } = new ObservableCollection<Grace>();
+
+        ERProcess _process;
 
         private string ProfilesFile => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Profiles.txt");
 
@@ -29,12 +32,15 @@ namespace EldenRingTool
         private List<AreaGroup> _allGraces = new List<AreaGroup>();
         private bool _suspendChangeTracking = false;
 
-        public UnlockGraces()
+        public UnlockGraces(ERProcess process)
         {
             InitializeComponent();
             DataContext = this;
 
+            var excludedGraces = new List<string> { "Show underground", "Table of Lost Grace / Roundtable Hold" };
+
             var grouped = GraceDB.Graces
+                .Where(g => !excludedGraces.Contains(g.Area))
                 .GroupBy(g => g.Area)
                 .Select(g => new AreaGroup
                 {
@@ -48,7 +54,9 @@ namespace EldenRingTool
                 });
 
             foreach (var area in grouped)
+            {
                 AvailableGracesGrouped.Add(area);
+            }
 
             _allGraces = AvailableGracesGrouped.Select(a => new AreaGroup
             {
@@ -70,6 +78,7 @@ namespace EldenRingTool
             };
 
             LoadProfilesIntoComboBox();
+            _process = process;
         }
 
         #region Tree/Listbox
@@ -80,6 +89,21 @@ namespace EldenRingTool
                 SelectedGraces.Add(g);
         }
 
+        private void SelectedGracesList_DoubleClick(object sender, RoutedEventArgs e)
+        {
+            RemoveGraceFromSelected();
+        }
+
+        private void RemoveGraceFromSelected()
+        {
+            if (SelectedGracesList.SelectedItem is Grace g)
+            {
+                SelectedGraces.Remove(g);
+                ActivateSelectedButton.IsEnabled = SelectedGraces.Any();
+                _hasUnsavedChanges = true; // mark unsaved changes
+            }
+        }
+
         private void AddGrace_Click(object sender, RoutedEventArgs e)
         {
             if (AvailableGracesTree.SelectedItem is Grace g && !SelectedGraces.Contains(g))
@@ -88,13 +112,26 @@ namespace EldenRingTool
 
         private void RemoveGrace_Click(object sender, RoutedEventArgs e)
         {
-            foreach (var g in SelectedGracesList.SelectedItems.Cast<Grace>().ToList())
+            if (SelectedGracesList.SelectedItem is Grace g)
+            {
                 SelectedGraces.Remove(g);
+                ActivateSelectedButton.IsEnabled = SelectedGraces.Any();
+                _hasUnsavedChanges = true; // mark unsaved changes
+            }
         }
 
         private void ActivateSelected_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show($"Activating {SelectedGraces.Count} graces!");
+            if (AvailableGracesTree.SelectedItem is Grace g)
+            {
+                _process.getSetEventFlag(g.ID, true);
+                if (g.Area.ToLower() == "Ainsel River" ||
+                    g.Area.ToLower() == "Nokron, Eternal City" ||
+                    g.Area.ToLower() == "Deeproot Depths")
+                {
+                    _process.getSetEventFlag(82001, true); // underground map -- force
+                }
+            }
         }
 
         #endregion
