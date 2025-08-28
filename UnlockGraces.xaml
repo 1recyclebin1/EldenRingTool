@@ -25,25 +25,18 @@
         <!-- Available Graces Tree -->
         <TreeView x:Name="AvailableGracesTree"
                   Grid.Column="0" Grid.Row="1"
-                  ItemsSource="{Binding AvailableGracesGrouped}"
-                  SelectedItemChanged="AvailableGracesTree_SelectedItemChanged">
+                  ItemsSource="{Binding AvailableGracesGrouped}">
             <TreeView.Resources>
-                <!-- AreaGroup template -->
                 <HierarchicalDataTemplate DataType="{x:Type local:AreaGroup}" ItemsSource="{Binding SubAreas}">
                     <TextBlock Text="{Binding Area}" FontWeight="Bold"/>
                 </HierarchicalDataTemplate>
-
-                <!-- SubAreaGroup template -->
                 <HierarchicalDataTemplate DataType="{x:Type local:SubAreaGroup}" ItemsSource="{Binding Graces}">
                     <TextBlock Text="{Binding SubArea}" FontStyle="Italic"/>
                 </HierarchicalDataTemplate>
-
-                <!-- Grace template (leaf) -->
                 <DataTemplate DataType="{x:Type local:Grace}">
                     <TextBlock Text="{Binding Name}"/>
                 </DataTemplate>
             </TreeView.Resources>
-
             <TreeView.ItemContainerStyle>
                 <Style TargetType="TreeViewItem">
                     <EventSetter Event="MouseDoubleClick" Handler="AvailableGraces_DoubleClick"/>
@@ -63,22 +56,18 @@
                  ItemsSource="{Binding SelectedGraces}" SelectionMode="Extended">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <TextBlock>
-                        <TextBlock.Text>
-                            <MultiBinding StringFormat="{}{0} - {1} - {2}">
-                                <Binding Path="Area"/>
-                                <Binding Path="SubArea"/>
-                                <Binding Path="Name"/>
-                            </MultiBinding>
-                        </TextBlock.Text>
-                    </TextBlock>
+                    <TextBlock Text="{Binding Name}"/>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <!-- Activate Button -->
+        <!-- Profile & Activate Buttons -->
         <StackPanel Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
-            <Button x:Name="ActivateSelectedButton" Content="Activate" Click="ActivateSelected_Click" Width="100" IsEnabled="False"/>
+            <Label Content="Profile:" VerticalAlignment="Center"/>
+            <ComboBox x:Name="ProfileComboBox" Width="150" IsEditable="True" SelectionChanged="ProfileComboBox_SelectionChanged"/>
+            <Button x:Name="SaveProfileButton" Content="Save/Update Profile" Click="SaveProfile_Click" Width="120" IsEnabled="False" Margin="5,0,0,0"/>
+            <Button x:Name="DeleteProfileButton" Content="Delete Profile" Click="DeleteProfile_Click" Width="100" Margin="5,0,0,0"/>
+            <Button x:Name="ActivateSelectedButton" Content="Activate" Click="ActivateSelected_Click" Width="100" IsEnabled="False" Margin="5,0,0,0"/>
         </StackPanel>
 
     </Grid>

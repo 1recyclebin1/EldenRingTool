@@ -1,6 +1,10 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace EldenRingTool
 {
@@ -9,12 +13,27 @@ namespace EldenRingTool
         public ObservableCollection<AreaGroup> AvailableGracesGrouped { get; set; } = new ObservableCollection<AreaGroup>();
         public ObservableCollection<Grace> SelectedGraces { get; set; } = new ObservableCollection<Grace>();
 
+        private string ProfilesFile => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Profiles.txt");
+
+        private bool _hasUnsavedChanges;
+        private bool HasUnsavedChanges
+        {
+            get => _hasUnsavedChanges;
+            set
+            {
+                _hasUnsavedChanges = value;
+                SaveProfileButton.IsEnabled = value;
+            }
+        }
+
+        private List<AreaGroup> _allGraces = new List<AreaGroup>();
+        private bool _suspendChangeTracking = false;
+
         public UnlockGraces()
         {
             InitializeComponent();
             DataContext = this;
 
-            // Example: populate AvailableGracesGrouped from GraceDB
             var grouped = GraceDB.Graces
                 .GroupBy(g => g.Area)
                 .Select(g => new AreaGroup
@@ -30,55 +49,244 @@ namespace EldenRingTool
 
             foreach (var area in grouped)
                 AvailableGracesGrouped.Add(area);
+
+            _allGraces = AvailableGracesGrouped.Select(a => new AreaGroup
+            {
+                Area = a.Area,
+                SubAreas = a.SubAreas.Select(sa => new SubAreaGroup
+                {
+                    SubArea = sa.SubArea,
+                    Graces = new List<Grace>(sa.Graces)
+                }).ToList(),
+                GracesWithoutSubArea = new List<Grace>(a.GracesWithoutSubArea)
+            }).ToList();
+
+            SelectedGraces.CollectionChanged += (s, e) =>
+            {
+                if (!_suspendChangeTracking)
+                    HasUnsavedChanges = true;
+
+                ActivateSelectedButton.IsEnabled = SelectedGraces.Any();
+            };
+
+            LoadProfilesIntoComboBox();
         }
 
-        private void AvailableGracesTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
-        {
-            // Optional: handle selection if needed
-        }
+        #region Tree/Listbox
 
         private void AvailableGraces_DoubleClick(object sender, RoutedEventArgs e)
         {
-            // Add selected grace from tree to SelectedGraces
             if (AvailableGracesTree.SelectedItem is Grace g && !SelectedGraces.Contains(g))
-            {
                 SelectedGraces.Add(g);
-                ActivateSelectedButton.IsEnabled = SelectedGraces.Any();
-            }
         }
 
         private void AddGrace_Click(object sender, RoutedEventArgs e)
         {
             if (AvailableGracesTree.SelectedItem is Grace g && !SelectedGraces.Contains(g))
-            {
                 SelectedGraces.Add(g);
-                ActivateSelectedButton.IsEnabled = SelectedGraces.Any();
-            }
         }
 
         private void RemoveGrace_Click(object sender, RoutedEventArgs e)
         {
             foreach (var g in SelectedGracesList.SelectedItems.Cast<Grace>().ToList())
-            {
                 SelectedGraces.Remove(g);
-            }
-            ActivateSelectedButton.IsEnabled = SelectedGraces.Any();
         }
 
         private void ActivateSelected_Click(object sender, RoutedEventArgs e)
         {
-            // Your activation logic here
             MessageBox.Show($"Activating {SelectedGraces.Count} graces!");
         }
 
-        private void FilterBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        #endregion
+
+        #region Filter
+
+        private void FilterBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            // Optional: implement filtering
+            string filter = FilterBox.Text.Trim().ToLower();
+            AvailableGracesGrouped.Clear();
+
+            foreach (var area in _allGraces)
+            {
+                var filteredArea = new AreaGroup { Area = area.Area };
+
+                filteredArea.GracesWithoutSubArea = area.GracesWithoutSubArea
+                    .Where(g => g.Name.ToLower().Contains(filter) || area.Area.ToLower().Contains(filter))
+                    .ToList();
+
+                filteredArea.SubAreas = area.SubAreas
+                    .Select(sa => new SubAreaGroup
+                    {
+                        SubArea = sa.SubArea,
+                        Graces = sa.Graces
+                            .Where(g =>
+                                g.Name.ToLower().Contains(filter) ||
+                                sa.SubArea.ToLower().Contains(filter) ||
+                                area.Area.ToLower().Contains(filter))
+                            .ToList()
+                    })
+                    .Where(sa => sa.Graces.Any())
+                    .ToList();
+
+                if (filteredArea.GracesWithoutSubArea.Any() || filteredArea.SubAreas.Any())
+                    AvailableGracesGrouped.Add(filteredArea);
+            }
         }
 
         private void ClearFilter_Click(object sender, RoutedEventArgs e)
         {
             FilterBox.Text = "";
         }
+
+        #endregion
+
+        #region Profile management
+
+        private void SaveProfile_Click(object sender, RoutedEventArgs e)
+        {
+            if (!SelectedGraces.Any()) return;
+
+            string profileName = ProfileComboBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(profileName))
+            {
+                MessageBox.Show("Please enter a profile name.");
+                return;
+            }
+
+            _suspendChangeTracking = true;
+
+            var line = profileName + ":" + string.Join(",", SelectedGraces.Select(g => g.ID));
+            var lines = File.Exists(ProfilesFile) ? File.ReadAllLines(ProfilesFile).ToList() : new List<string>();
+
+            // Overwrite existing profile if present
+            lines.RemoveAll(l => l.StartsWith(profileName + ":"));
+            lines.Add(line);
+
+            File.WriteAllLines(ProfilesFile, lines);
+
+            LoadProfilesIntoComboBox();
+            ProfileComboBox.SelectedItem = profileName;
+
+            _suspendChangeTracking = false;
+            HasUnsavedChanges = false;
+
+            MessageBox.Show($"Profile '{profileName}' saved/updated!");
+        }
+
+        private void DeleteProfile_Click(object sender, RoutedEventArgs e)
+        {
+            if (ProfileComboBox.SelectedItem == null) return;
+
+            var profileName = ProfileComboBox.SelectedItem.ToString();
+            if (!File.Exists(ProfilesFile)) return;
+
+            var lines = File.ReadAllLines(ProfilesFile).ToList();
+            var removed = lines.RemoveAll(l => l.StartsWith(profileName + ":"));
+
+            if (removed > 0)
+            {
+                File.WriteAllLines(ProfilesFile, lines);
+                LoadProfilesIntoComboBox();
+
+                _suspendChangeTracking = true;
+                SelectedGraces.Clear();
+                _suspendChangeTracking = false;
+
+                HasUnsavedChanges = false;
+                MessageBox.Show($"Profile '{profileName}' deleted.");
+            }
+        }
+
+        private void ProfileComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (ProfileComboBox.SelectedItem == null) return;
+
+            string selectedProfile = ProfileComboBox.SelectedItem.ToString();
+
+            if (HasUnsavedChanges)
+            {
+                var result = MessageBox.Show(
+                    "You have unsaved changes. Do you want to discard them and load the selected profile?",
+                    "Unsaved Changes",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (result == MessageBoxResult.No)
+                {
+                    if (e.RemovedItems.Count > 0)
+                        ProfileComboBox.SelectedItem = e.RemovedItems[0];
+                    return;
+                }
+            }
+
+            LoadProfile(selectedProfile);
+            HasUnsavedChanges = false;
+        }
+
+        private void LoadProfile(string profileName)
+        {
+            if (!File.Exists(ProfilesFile)) return;
+
+            var line = File.ReadAllLines(ProfilesFile).FirstOrDefault(l => l.StartsWith(profileName + ":"));
+            if (line == null) return;
+
+            var parts = line.Split(':');
+            if (parts.Length < 2) return;
+
+            var ids = parts[1].Split(',').Select(int.Parse).ToHashSet();
+
+            _suspendChangeTracking = true;
+            SelectedGraces.Clear();
+
+            foreach (var area in AvailableGracesGrouped)
+            {
+                foreach (var g in area.GracesWithoutSubArea)
+                    if (ids.Contains(g.ID))
+                        SelectedGraces.Add(g);
+
+                foreach (var sub in area.SubAreas)
+                    foreach (var g in sub.Graces)
+                        if (ids.Contains(g.ID))
+                            SelectedGraces.Add(g);
+            }
+
+            _suspendChangeTracking = false;
+        }
+
+        private void LoadProfilesIntoComboBox()
+        {
+            ProfileComboBox.Items.Clear();
+
+            if (!File.Exists(ProfilesFile)) return;
+
+            foreach (var line in File.ReadAllLines(ProfilesFile))
+                ProfileComboBox.Items.Add(line.Split(':')[0]);
+        }
+
+        #endregion
+
+        #region Unsaved Changes on Close
+
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            if (HasUnsavedChanges)
+            {
+                var result = MessageBox.Show(
+                    "You have unsaved changes. Are you sure you want to close?",
+                    "Unsaved Changes",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (result == MessageBoxResult.No)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+            }
+
+            base.OnClosing(e);
+        }
+
+        #endregion
     }
 }
