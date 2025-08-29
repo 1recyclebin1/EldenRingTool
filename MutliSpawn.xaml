@@ -66,6 +66,7 @@
             <ListBox x:Name="SelectedList" 
                      SelectionMode="Extended"
                      ItemsSource="{Binding SelectedItems}"
+                     MouseDoubleClick="SelectedItemsListBox_MouseDoubleClick"
                      Height="300">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
@@ -102,11 +103,11 @@
         <StackPanel Grid.Row="3" Grid.Column="2" Grid.ColumnSpan="2" HorizontalAlignment="Center" Orientation="Vertical" Margin="0,10,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,30,10" Height="25px">
                 <Label>Build:</Label>
-                <ComboBox x:Name="comboLoadBuild" ItemsSource="{Binding Builds}" Width="210" Margin="0,0,5,0" SelectionChanged="ComboLoadBuild_SelectionChanged"/>
+                <ComboBox x:Name="comboLoadBuild" Width="210" Margin="0,0,5,0" SelectionChanged="ComboLoadBuild_SelectionChanged"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="0,0,30,10" Height="25px" HorizontalAlignment="Right">
-                <Button Content="Delete Build" Click="DeleteBuild_Click" Width="100" Margin="5,0"/>
-                <Button Content="Save Build" Click="SaveBuild_Click" Width="100" Margin="5,0"/>
+                <Button x:Name="DeleteButton" Content="Delete Build" Click="DeleteBuild_Click" Width="100" Margin="5,0"/>
+                <Button x:Name="SaveButton" Content="Save Build" Click="SaveBuild_Click" Width="100" Margin="5,0"/>
             </StackPanel>
         </StackPanel>
  

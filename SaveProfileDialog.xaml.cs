@@ -10,8 +10,10 @@ namespace EldenRingTool
         public string SelectedProfileName { get; private set; }
         private readonly HashSet<string> _existingProfiles;
 
-        public SaveProfileDialog(IEnumerable<string> existingProfiles, string currentProfile = "")
+        public SaveProfileDialog(IEnumerable<string> existingProfiles, string windowName, string currentProfile = "")
         {
+            this.Title = windowName;
+
             InitializeComponent();
             _existingProfiles = new HashSet<string>(existingProfiles);
             ProfileNameComboBox.ItemsSource = _existingProfiles.ToList();

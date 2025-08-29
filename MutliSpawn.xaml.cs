@@ -131,9 +131,14 @@ namespace EldenRingTool
             AddButton_Click(sender, e);
         }
 
+        private void SelectedItemsListBox_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            RemoveButton_Click(sender, e);
+        }
+
         private void SelectedItems_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            SpawnAllButton.IsEnabled = SelectedItems.Count > 0;
+            SpawnAllButton.IsEnabled = SaveButton.IsEnabled = SelectedItems.Any();
         }
 
 
@@ -245,7 +250,7 @@ namespace EldenRingTool
 
             var existingProfiles = builds.Keys.ToList();
 
-            var dialog = new SaveProfileDialog(existingProfiles, comboLoadBuild.Text)
+            var dialog = new SaveProfileDialog(existingProfiles, "Save Build", comboLoadBuild.Text)
             {
                 Owner = this
             };
@@ -369,7 +374,7 @@ namespace EldenRingTool
 
                 comboLevel.ItemsSource = Enumerable.Range(0, maxValue + 1);
                 comboLevel.SelectedIndex = 0;
-                comboLevel.IsEnabled = (selected.Category != ItemCategory.NONE); // disable if non-weapon
+                comboLevel.IsEnabled = (selected.Category != ItemCategory.NONE); 
             }
             else
             {
@@ -380,6 +385,9 @@ namespace EldenRingTool
         private void ComboLoadBuild_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var selectedBuild = comboLoadBuild.SelectedItem as string;
+            
+            DeleteButton.IsEnabled = (selectedBuild != EMPTY_BUILD_NAME);
+
             if (selectedBuild == EMPTY_BUILD_NAME)
             {
                 SelectedItems.Clear();

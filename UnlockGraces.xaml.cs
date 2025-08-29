@@ -212,7 +212,7 @@ namespace EldenRingTool
                 ? File.ReadAllLines(ProfilesFile).Select(l => l.Split(':')[0])
                 : Enumerable.Empty<string>();
 
-            var dialog = new SaveProfileDialog(existingProfiles, ProfileComboBox.Text)
+            var dialog = new SaveProfileDialog(existingProfiles, "Save Grace Profile", ProfileComboBox.Text)
             {
                 Owner = this
             };
