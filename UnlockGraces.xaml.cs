@@ -22,15 +22,13 @@ namespace EldenRingTool
         private bool HasUnsavedChanges
         {
             get => _hasUnsavedChanges;
-            set
-            {
-                _hasUnsavedChanges = value;
-                SaveProfileButton.IsEnabled = value;
-            }
+            set => _hasUnsavedChanges = value;
         }
 
         private List<AreaGroup> _allGraces = new List<AreaGroup>();
         private bool _suspendChangeTracking = false;
+
+        public const string EMPTY_PROFILE_NAME = "<New Profile>";
 
         public UnlockGraces(ERProcess process)
         {
@@ -54,9 +52,7 @@ namespace EldenRingTool
                 });
 
             foreach (var area in grouped)
-            {
                 AvailableGracesGrouped.Add(area);
-            }
 
             _allGraces = AvailableGracesGrouped.Select(a => new AreaGroup
             {
@@ -71,14 +67,18 @@ namespace EldenRingTool
 
             SelectedGraces.CollectionChanged += (s, e) =>
             {
-                if (!_suspendChangeTracking)
-                    HasUnsavedChanges = true;
-
                 ActivateSelectedButton.IsEnabled = SelectedGraces.Any();
+                SaveProfileButton.IsEnabled = SelectedGraces.Any(); 
             };
 
-            LoadProfilesIntoComboBox();
+            LoadProfilesIntoComboBox(); 
+
             _process = process;
+
+            SaveProfileButton.IsEnabled = SelectedGraces.Any();
+            ActivateSelectedButton.IsEnabled = SelectedGraces.Any();
+            DeleteProfileButton.IsEnabled = ProfileComboBox.SelectedItem != null
+                                           && ProfileComboBox.SelectedItem.ToString() != EMPTY_PROFILE_NAME;
         }
 
         #region Tree/Listbox
@@ -202,33 +202,39 @@ namespace EldenRingTool
 
         private void SaveProfile_Click(object sender, RoutedEventArgs e)
         {
-            if (!SelectedGraces.Any()) return;
-
-            string profileName = ProfileComboBox.Text.Trim();
-            if (string.IsNullOrWhiteSpace(profileName))
+            if (!SelectedGraces.Any())
             {
-                MessageBox.Show("Please enter a profile name.");
+                MessageBox.Show("Cannot save an empty profile. Please select at least one grace.");
                 return;
             }
 
-            _suspendChangeTracking = true;
+            var existingProfiles = File.Exists(ProfilesFile)
+                ? File.ReadAllLines(ProfilesFile).Select(l => l.Split(':')[0])
+                : Enumerable.Empty<string>();
 
-            var line = profileName + ":" + string.Join(",", SelectedGraces.Select(g => g.ID));
-            var lines = File.Exists(ProfilesFile) ? File.ReadAllLines(ProfilesFile).ToList() : new List<string>();
+            var dialog = new SaveProfileDialog(existingProfiles, ProfileComboBox.Text)
+            {
+                Owner = this
+            };
 
-            // Overwrite existing profile if present
-            lines.RemoveAll(l => l.StartsWith(profileName + ":"));
-            lines.Add(line);
+            if (dialog.ShowDialog() == true)
+            {
+                string profileName = dialog.SelectedProfileName;
 
-            File.WriteAllLines(ProfilesFile, lines);
+                var line = profileName + ":" + string.Join(",", SelectedGraces.Select(g => g.ID));
+                var lines = File.Exists(ProfilesFile) ? File.ReadAllLines(ProfilesFile).ToList() : new List<string>();
 
-            LoadProfilesIntoComboBox();
-            ProfileComboBox.SelectedItem = profileName;
+                lines.RemoveAll(l => l.StartsWith(profileName + ":"));
+                lines.Add(line);
+                File.WriteAllLines(ProfilesFile, lines);
 
-            _suspendChangeTracking = false;
-            HasUnsavedChanges = false;
+                LoadProfilesIntoComboBox();
+                ProfileComboBox.SelectedItem = profileName;
 
-            MessageBox.Show($"Profile '{profileName}' saved/updated!");
+                HasUnsavedChanges = false;
+
+                MessageBox.Show($"Profile '{profileName}' saved/updated!");
+            }
         }
 
         private void DeleteProfile_Click(object sender, RoutedEventArgs e)
@@ -261,22 +267,20 @@ namespace EldenRingTool
 
             string selectedProfile = ProfileComboBox.SelectedItem.ToString();
 
-            if (HasUnsavedChanges)
-            {
-                var result = MessageBox.Show(
-                    "You have unsaved changes. Do you want to discard them and load the selected profile?",
-                    "Unsaved Changes",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
+            // Disable delete for empty profile
+            DeleteProfileButton.IsEnabled = selectedProfile != EMPTY_PROFILE_NAME;
 
-                if (result == MessageBoxResult.No)
-                {
-                    if (e.RemovedItems.Count > 0)
-                        ProfileComboBox.SelectedItem = e.RemovedItems[0];
-                    return;
-                }
+            // Clear selection if Empty Profile chosen
+            if (selectedProfile == EMPTY_PROFILE_NAME)
+            {
+                _suspendChangeTracking = true;
+                SelectedGraces.Clear();
+                _suspendChangeTracking = false;
+                HasUnsavedChanges = false;
+                return;
             }
 
+            // Load saved profile
             LoadProfile(selectedProfile);
             HasUnsavedChanges = false;
         }
@@ -315,10 +319,20 @@ namespace EldenRingTool
         {
             ProfileComboBox.Items.Clear();
 
-            if (!File.Exists(ProfilesFile)) return;
+            ProfileComboBox.Items.Add(EMPTY_PROFILE_NAME);
 
-            foreach (var line in File.ReadAllLines(ProfilesFile))
-                ProfileComboBox.Items.Add(line.Split(':')[0]);
+            if (File.Exists(ProfilesFile))
+            {
+                foreach (var line in File.ReadAllLines(ProfilesFile))
+                {
+                    var profileName = line.Split(':')[0];
+                    ProfileComboBox.Items.Add(profileName);
+                }
+            }
+
+            ProfileComboBox.SelectedIndex = 0;
+
+            DeleteProfileButton.IsEnabled = false; // can't delete the empty profile
         }
 
         #endregion
