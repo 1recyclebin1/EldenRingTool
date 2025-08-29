@@ -24,6 +24,8 @@ namespace EldenRingTool
         private string buildsFile = "builds.txt";
         private bool hasUnsavedChanges = false;
 
+        public const string EMPTY_BUILD_NAME = "<New Profile>";
+
         ERProcess _process;
 
 
@@ -129,9 +131,14 @@ namespace EldenRingTool
             AddButton_Click(sender, e);
         }
 
+        private void SelectedItemsListBox_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            RemoveButton_Click(sender, e);
+        }
+
         private void SelectedItems_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            SpawnAllButton.IsEnabled = SelectedItems.Count > 0;
+            SpawnAllButton.IsEnabled = SaveButton.IsEnabled = SelectedItems.Any();
         }
 
 
@@ -235,76 +242,45 @@ namespace EldenRingTool
 
         private void SaveBuild_Click(object sender, RoutedEventArgs e)
         {
-            string buildName = txtBuildName.Text.Trim();
-
-            if (string.IsNullOrEmpty(buildName))
+            if (!SelectedItems.Any())
             {
-                var selectedBuild = comboLoadBuild.SelectedItem as string;
-                if (!string.IsNullOrEmpty(selectedBuild))
-                {
-                    var result = MessageBox.Show(
-                        $"No build name entered. Do you want to replace the selected build \"{selectedBuild}\"?",
-                        "Confirm Overwrite",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Question
-                    );
-
-                    if (result != MessageBoxResult.Yes)
-                    {
-                        txtBuildName.Text = "";
-                        return;
-                    }
-
-                    buildName = selectedBuild;
-                    hasUnsavedChanges = false;
-                }
-                else
-                {
-                    MessageBox.Show("Please enter a build name or select a build to overwrite.", "Missing Name", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-            }
-
-            if (SelectedItems.Count == 0)
-            {
-                MessageBox.Show("No items selected to save.", "Empty Build", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Cannot save an empty profile. Please select at least one item.");
                 return;
             }
 
-            if (builds.ContainsKey(buildName))
+            var existingProfiles = builds.Keys.ToList();
+
+            var dialog = new SaveProfileDialog(existingProfiles, "Save Build", comboLoadBuild.Text)
             {
-                var result = MessageBox.Show(
-                    $"A build named \"{buildName}\" already exists. Overwrite it?",
-                    "Confirm Overwrite",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question
-                );
-                if (result != MessageBoxResult.Yes)
-                {
-                    txtBuildName.Text = "";
-                    return;
-                }
+                Owner = this
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                string buildName = dialog.SelectedProfileName;
+
+                var itemsList = SelectedItems.Select(i =>
+                    $"{i.Name.Replace("|", "||")}|{i.InfusionName.Replace("|", "||")}|{i.AshOfWarName.Replace("|", "||")}|{i.Level}|{i.Quantity}"
+                ).ToList();
+
+                builds[buildName] = itemsList;
+
+                SaveAllBuildsToFile();
+                hasUnsavedChanges = false;
+
+                RefreshBuildList();
+
+                comboLoadBuild.SelectedItem = buildName;
+
+                MessageBox.Show($"Build \"{buildName}\" saved successfully.", "Saved", MessageBoxButton.OK, MessageBoxImage.Information);
             }
-
-            var itemsList = SelectedItems.Select(i =>
-                $"{i.Name.Replace("|", "||")}|{i.InfusionName.Replace("|", "||")}|{i.AshOfWarName.Replace("|", "||")}|{i.Level}|{i.Quantity}"
-            ).ToList();
-
-            builds[buildName] = itemsList;
-            SaveAllBuildsToFile();
-            RefreshBuildList();
-            hasUnsavedChanges = false;
-
-            comboLoadBuild.SelectedItem = buildName;
-
-            MessageBox.Show($"Build \"{buildName}\" saved successfully.", "Saved", MessageBoxButton.OK, MessageBoxImage.Information);
-
-            txtBuildName.Text = "";
         }
 
         private void SaveAllBuildsToFile()
         {
-            var lines = builds.Select(kvp =>
+            var lines = builds
+                .Where(kvp => kvp.Key != EMPTY_BUILD_NAME) 
+                .Select(kvp =>
                 kvp.Key.Replace("|", "||") + "|" + string.Join(";", kvp.Value)
             );
             File.WriteAllLines(buildsFile, lines);
@@ -336,14 +312,9 @@ namespace EldenRingTool
             {
                 builds.Remove(buildName);
 
-                comboLoadBuild.ItemsSource = null;
-                comboLoadBuild.ItemsSource = builds.Keys.ToList();
-
-                txtBuildName.Text = "";
+                RefreshBuildList();
 
                 SaveAllBuildsToFile();
-
-                MessageBox.Show($"Build '{buildName}' deleted.");
             }
         }
 
@@ -369,6 +340,10 @@ namespace EldenRingTool
 
                 builds[buildName] = items;
             }
+
+            builds = new Dictionary<string, List<string>> { { EMPTY_BUILD_NAME, new List<string>() } }
+                        .Concat(builds)
+                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
             RefreshBuildList();
         }
@@ -399,7 +374,7 @@ namespace EldenRingTool
 
                 comboLevel.ItemsSource = Enumerable.Range(0, maxValue + 1);
                 comboLevel.SelectedIndex = 0;
-                comboLevel.IsEnabled = (selected.Category != ItemCategory.NONE); // disable if non-weapon
+                comboLevel.IsEnabled = (selected.Category != ItemCategory.NONE); 
             }
             else
             {
@@ -410,9 +385,11 @@ namespace EldenRingTool
         private void ComboLoadBuild_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var selectedBuild = comboLoadBuild.SelectedItem as string;
-            if (selectedBuild == null)
+            
+            DeleteButton.IsEnabled = (selectedBuild != EMPTY_BUILD_NAME);
+
+            if (selectedBuild == EMPTY_BUILD_NAME)
             {
-                LoadedBuildName.Content = string.Empty;
                 SelectedItems.Clear();
                 return;
             }
@@ -436,8 +413,6 @@ namespace EldenRingTool
             }
 
             LoadBuild(selectedBuild);
-            LoadedBuildName.Content = "Loaded Build: " + comboLoadBuild.SelectedItem.ToString();
-            txtBuildName.Text = "";
             hasUnsavedChanges = false;
         }
 
@@ -445,11 +420,12 @@ namespace EldenRingTool
         {
             comboLoadBuild.ItemsSource = null;
             comboLoadBuild.ItemsSource = builds.Keys.ToList();
+            comboLoadBuild.SelectedItem = EMPTY_BUILD_NAME;
         }
 
         private void LoadBuild(string buildName)
         {
-            if (!builds.ContainsKey(buildName)) return;
+            if (buildName is null || !builds.ContainsKey(buildName)) return;
 
             SelectedItems.Clear();
 
@@ -468,7 +444,7 @@ namespace EldenRingTool
                 });
             }
 
-            hasUnsavedChanges = false; // Reset unsaved flag after loading
+            hasUnsavedChanges = false;
         }
 
     }

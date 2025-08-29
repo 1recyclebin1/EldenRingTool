@@ -182,6 +182,8 @@ namespace EldenRingTool
             Title = "ERTool v" + assInfo.Version;
             _normalTitle = Title;
 
+            new GraceDB();
+
             Closing += MainWindow_Closing;
             Closed += MainWindow_Closed;
             Loaded += MainWindow_Loaded;
@@ -1992,6 +1994,19 @@ namespace EldenRingTool
                 }
             }
             FixPanelArrows(dockPanel, panelVisibility);
+        }
+
+        private void unlockGraces(object sender, RoutedEventArgs e)
+        {
+            var main = this;
+            var unlockGraces = new UnlockGraces(_process);
+
+            unlockGraces.WindowStartupLocation = WindowStartupLocation.Manual;
+            unlockGraces.Left = main.Left + main.Width + 10; 
+            unlockGraces.Top = main.Top;
+
+            unlockGraces.Owner = this;
+            unlockGraces.Show();
         }
     }
 }

@@ -1,0 +1,93 @@
+﻿<Window x:Class="EldenRingTool.UnlockGraces"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:EldenRingTool"
+        Title="Unlock Graces" Height="450" Width="750">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Filter row -->
+        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,8">
+            <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <TextBox x:Name="FilterBox" Width="250" TextChanged="FilterBox_TextChanged"/>
+            <Button Content="X" Width="30" Margin="6,0,0,0" Click="ClearFilter_Click"/>
+        </StackPanel>
+
+        <!-- Main content row -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="2*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Tree of available graces -->
+            <TreeView x:Name="AvailableGracesTree"
+                      MouseDoubleClick="AvailableGraces_DoubleClick"
+                      SelectedItemChanged="AvailableGraces_SelectedItemChanged"
+                      ItemsSource="{Binding AvailableGracesGrouped}"
+                      Grid.Column="0">
+                <TreeView.Resources>
+                    <!-- Area -->
+                    <HierarchicalDataTemplate DataType="{x:Type local:AreaGroup}" ItemsSource="{Binding Children}">
+                        <TextBlock Text="{Binding Area}" FontWeight="Bold"/>
+                    </HierarchicalDataTemplate>
+                    <!-- SubArea -->
+                    <HierarchicalDataTemplate DataType="{x:Type local:SubAreaGroup}" ItemsSource="{Binding Graces}">
+                        <TextBlock Text="{Binding SubArea}" FontStyle="Italic"/>
+                    </HierarchicalDataTemplate>
+                    <!-- Grace -->
+                    <DataTemplate DataType="{x:Type local:Grace}">
+                        <TextBlock Text="{Binding Name}"/>
+                    </DataTemplate>
+                </TreeView.Resources>
+            </TreeView>
+
+            <!-- Add/remove buttons -->
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <Button Content="&gt;" Width="40" Margin="0,0,0,6" Click="AddGrace_Click"/>
+                <Button Content="&lt;" Width="40" Click="RemoveGrace_Click"/>
+            </StackPanel>
+
+            <!-- Selected graces list -->
+            <ListBox x:Name="SelectedGracesList"
+                     Grid.Column="2"
+                     MouseDoubleClick="SelectedGracesList_DoubleClick"
+                     ItemsSource="{Binding SelectedGraces}"
+                     SelectionMode="Extended"
+                     DisplayMemberPath="Name"/>
+        </Grid>
+
+        <!-- Profiles & actions -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
+                <Button x:Name="ActivateSelectedButton" Content="Activate Selected" Width="100" Margin="6,0,0,0" Click="ActivateSelected_Click"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
+                <Button x:Name="ActivateGroupButton" Content="Activate Group" Width="100" Margin="6,0,0,0" Click="ActivateGroup_Click"/>
+            </StackPanel>
+        </Grid>
+        
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
+            <TextBlock Text="Profile:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <ComboBox x:Name="ProfileComboBox"
+                      Width="205" Margin="0,0,35,0"
+                      SelectionChanged="ProfileComboBox_SelectionChanged"/>
+        </StackPanel>
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
+            <Button x:Name="SaveProfileButton" Content="Save Profile" Width="100" Margin="5,0,0,0" Click="SaveProfile_Click"/>
+            <Button x:Name="DeleteProfileButton" Content="Delete Profile" Width="100" Margin="5,0,0,0" Click="DeleteProfile_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

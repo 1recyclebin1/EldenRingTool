@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Threading;
 using static EldenRingTool.ERProcess;
 
@@ -2204,6 +2205,7 @@ namespace EldenRingTool
                 return ret;
             }
         }
+
         static void loadDB()
         {
             if (_loaded) { return; }
@@ -2350,6 +2352,82 @@ namespace EldenRingTool
             }
         }
     }
+
+    public class GraceDB
+    {
+        static List<Grace> graces = new List<Grace>();
+
+        public GraceDB()
+        {
+            graces = importIDNameTsv("BaseGraces.tsv");
+        }
+
+        public static List<Grace> importIDNameTsv(string file)
+        {
+            var ret = new List<Grace>();
+            var list = FileUtils.importGenericTextResource(file, '\t');
+            foreach (var row in list.Skip(1))
+            {
+                if (row.Length < 2) continue;
+
+                if (!int.TryParse(row[0], out int id))
+                    continue;
+
+                var segments = row[1].Split(new[] { " - " }, StringSplitOptions.None);
+
+                var area = segments.Length > 0 ? segments[0] : "";
+                var subArea = segments.Length > 1 ? segments[1] : "";
+                var name = segments.Length > 2 ? string.Join(" - ", segments.Skip(2)) : "";
+
+                ret.Add(new Grace(id, area, subArea, name));
+            }
+            return ret;
+        }
+
+        public static List<Grace> Graces => graces;
+    }
+
+    public class Grace
+    {
+        public int ID { get; set; }
+        public string Area { get; set; }
+        public string SubArea { get; set; }
+        public string Name { get; set; }
+
+        public Grace(int id, string area, string subArea, string name)
+        {
+            ID = id;
+            Area = area;
+            SubArea = subArea;
+            Name = name;
+        }
+    }
+
+    public class SubAreaGroup
+    {
+        public string SubArea { get; set; }
+        public List<Grace> Graces { get; set; } = new List<Grace>();
+    }
+
+    public class AreaGroup
+    {
+        public string Area { get; set; }
+        public List<SubAreaGroup> SubAreas { get; set; } = new List<SubAreaGroup>();
+        public List<Grace> GracesWithoutSubArea { get; set; } = new List<Grace>();
+
+        public IEnumerable<object> Children
+        {
+            get
+            {
+                foreach (var g in GracesWithoutSubArea)
+                    yield return g;
+                foreach (var s in SubAreas)
+                    yield return s;
+            }
+        }
+    }
+
+
 
     public class ExtraFlag
     {
