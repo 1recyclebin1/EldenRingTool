@@ -71,23 +71,23 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
-                <Button x:Name="ActivateSelectedButton" Content="Activate Selected" Margin="6,0,0,0" Click="ActivateSelected_Click"/>
+                <Button x:Name="ActivateSelectedButton" Content="Activate Selected" Width="100" Margin="6,0,0,0" Click="ActivateSelected_Click"/>
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
-                <Button x:Name="ActivateGroupButton" Content="Activate Group" Margin="6,0,0,0" Click="ActivateGroup_Click"/>
+                <Button x:Name="ActivateGroupButton" Content="Activate Group" Width="100" Margin="6,0,0,0" Click="ActivateGroup_Click"/>
             </StackPanel>
         </Grid>
         
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
             <TextBlock Text="Profile:" VerticalAlignment="Center" Margin="0,0,6,0"/>
             <ComboBox x:Name="ProfileComboBox"
-                      Width="200"
+                      Width="205" Margin="0,0,35,0"
                       SelectionChanged="ProfileComboBox_SelectionChanged"/>
         </StackPanel>
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
-            <Button x:Name="SaveProfileButton" Content="Save Profile" Margin="6,0,0,0" Click="SaveProfile_Click"/>
-            <Button x:Name="DeleteProfileButton" Content="Delete Profile" Margin="6,0,0,0" Click="DeleteProfile_Click"/>
+            <Button x:Name="SaveProfileButton" Content="Save Profile" Width="100" Margin="5,0,0,0" Click="SaveProfile_Click"/>
+            <Button x:Name="DeleteProfileButton" Content="Delete Profile" Width="100" Margin="5,0,0,0" Click="DeleteProfile_Click"/>
         </StackPanel>
     </Grid>
 </Window>
