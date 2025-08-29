@@ -401,7 +401,6 @@ namespace EldenRingTool
                     }
                 }
 
-                int i = 0;
                 foreach (var kvp in hotkeyMap)
                 {
                     var tuple = Tuple.Create(kvp.Key.Item1, kvp.Key.Item2);
@@ -414,7 +413,7 @@ namespace EldenRingTool
                     }
                     Utils.debugWrite(debugStr);
                 }
-                btnHotkeys.Foreground = registeredHotkeys.Count > 0 ? Brushes.Blue : Brushes.Black;
+                //btnHotkeys.Foreground = registeredHotkeys.Count > 0 ? Brushes.Blue : Brushes.Black;
                 return true;
             }
             catch { }
@@ -1187,45 +1186,32 @@ namespace EldenRingTool
             _process.addRunes(amt);
         }
 
-        private void hotkeySetup(object sender, RoutedEventArgs e)
+        private void newHotkeySetup(object sender, RoutedEventArgs e)
         {
-            if (Keyboard.IsKeyDown(Key.LeftCtrl))
+            var hotkeySetup = new HotkeySetupWindow(modMap, keyMap, actionMap);
+
+            hotkeySetup.WindowStartupLocation = WindowStartupLocation.Manual;
+            hotkeySetup.Left = this.Left + this.Width + 10;
+            hotkeySetup.Top = this.Top;
+
+            hotkeySetup.Owner = this;
+
+            bool? result = hotkeySetup.ShowDialog();
+
+            if (result == true)
             {
-                clearRegisteredHotkeys();
-                if (!parseHotkeys())
-                {
-                    MessageBox.Show("Failed to parse hotkey file.");
-                }
-                else
-                {
-                    MessageBox.Show(registeredHotkeys.Count + " hotkeys registered.");
-                }
+                // User confirmed, safe to pull data from hotkeySetup
+                // e.g. copy back its HotkeyAssignments, or use its maps
             }
-            else if (Keyboard.IsKeyDown(Key.LeftShift))
-            {
-                var psi = new ProcessStartInfo(System.IO.Path.GetDirectoryName(getHotkeyFileAppData()));
-                psi.UseShellExecute = true;
-                Process.Start(psi);
-            }
-            else if (Keyboard.IsKeyDown(Key.LeftAlt))
-            {
-                var res = MessageBox.Show("Reset hotkey file?", "Reset hotkeys", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                if (res == MessageBoxResult.Yes)
-                {
-                    backupHotkeyFile();
-                    generateDefaultHotkeyFile();
-                    var psi = new ProcessStartInfo(hotkeyFile());
-                    psi.UseShellExecute = true;
-                    Process.Start(psi);
-                }
-            }
-            else
-            {
-                if (!File.Exists(hotkeyFile())) { generateDefaultHotkeyFile(); }
-                var psi = new ProcessStartInfo(hotkeyFile());
-                psi.UseShellExecute = true;
-                Process.Start(psi);
-            }
+        }
+
+        public void UpdateHotkeys(Dictionary<string, Modifiers> modMap,
+                          Dictionary<string, Key> keyMap,
+                          Dictionary<string, HOTKEY_ACTIONS> actionMap)
+        {
+            this.modMap = modMap;
+            this.keyMap = keyMap;
+            this.actionMap = actionMap;
         }
 
         private void goToWebsite(object sender, RoutedEventArgs e)

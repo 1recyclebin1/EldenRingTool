@@ -1,0 +1,70 @@
+﻿<Window x:Class="EldenRingTool.HotkeySetupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:EldenRingTool"
+        Title="Hotkey Setup" Height="450" Width="550"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </Window.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Add row button -->
+        <Button Grid.Row="0" Content="Add Hotkey" Width="100" Height="30" Click="AddHotkey_Click" />
+
+        <!-- Hotkeys DataGrid -->
+        <DataGrid Grid.Row="1" x:Name="HotkeysGrid" AutoGenerateColumns="False" CanUserAddRows="False" ItemsSource="{Binding HotkeyAssignments}">
+            <DataGrid.Columns>
+                <!-- Action selector -->
+                <DataGridComboBoxColumn Header="Action"
+                        SelectedItemBinding="{Binding Action, Mode=TwoWay}"
+                        Width="200">
+                    <DataGridComboBoxColumn.ElementStyle>
+                        <Style TargetType="ComboBox">
+                            <Setter Property="ItemsSource" Value="{Binding DataContext.AllActions, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                        </Style>
+                    </DataGridComboBoxColumn.ElementStyle>
+                    <DataGridComboBoxColumn.EditingElementStyle>
+                        <Style TargetType="ComboBox">
+                            <Setter Property="ItemsSource" Value="{Binding DataContext.AllActions, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                        </Style>
+                    </DataGridComboBoxColumn.EditingElementStyle>
+                </DataGridComboBoxColumn>
+
+                <!-- Hotkey column -->
+                <DataGridTemplateColumn Header="Hotkey" Width="*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBox Text="{Binding HotkeyText, Mode=TwoWay}"
+                                    PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- Remove button -->
+                <DataGridTemplateColumn Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="Remove" Click="RemoveRow_Click"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+
+        <!-- OK/Cancel -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="OK" Width="75" Margin="5" Click="Ok_Click"/>
+            <Button Content="Cancel" Width="75" Margin="5" Click="Cancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

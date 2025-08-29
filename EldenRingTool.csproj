@@ -61,6 +61,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="HotkeySetupWindow.xaml.cs">
+      <DependentUpon>HotkeySetupWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="ItemSpawn.xaml.cs">
       <DependentUpon>ItemSpawn.xaml</DependentUpon>
     </Compile>
@@ -84,6 +87,10 @@
     <Compile Include="Util\AsmLoader.cs" />
     <Compile Include="Util\CodeCaveOffsets.cs" />
     <Compile Include="Util\HookManager.cs" />
+    <Page Include="HotkeySetupWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="ItemSpawn.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
