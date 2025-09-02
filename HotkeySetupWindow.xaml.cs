@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -20,25 +22,77 @@ namespace EldenRingTool
 
         public List<HOTKEY_ACTIONS> AllActions { get; private set; }
 
-
-        public HotkeySetupWindow(Dictionary<string, Modifiers> modMap, Dictionary<string, Key> keyMap, Dictionary<string, HOTKEY_ACTIONS> actionMap)
+        public HotkeySetupWindow(
+            Dictionary<string, Modifiers> modMap,
+            Dictionary<string, Key> keyMap,
+            Dictionary<string, HOTKEY_ACTIONS> actionMap,
+            string existingHotkeyLines = null)
         {
             InitializeComponent();
 
             HotkeyAssignments = new ObservableCollection<HotkeyAssignmentViewModel>();
-            ModMap = modMap;
-            ActionMap = actionMap;
-            KeyMap = keyMap;
-
-            AllActions = new List<HOTKEY_ACTIONS>(
-                (HOTKEY_ACTIONS[])System.Enum.GetValues(typeof(HOTKEY_ACTIONS))
-            );
-
             ModMap = new Dictionary<string, Modifiers>(modMap);
             KeyMap = new Dictionary<string, Key>(keyMap);
             ActionMap = new Dictionary<string, HOTKEY_ACTIONS>(actionMap);
 
+            AllActions = new List<HOTKEY_ACTIONS>(
+                (HOTKEY_ACTIONS[])Enum.GetValues(typeof(HOTKEY_ACTIONS))
+            );
+
             DataContext = this;
+
+            // Preload existing hotkeys if provided
+            if (!string.IsNullOrWhiteSpace(existingHotkeyLines))
+            {
+                LoadAssignments(existingHotkeyLines);
+            }
+        }
+
+        private void LoadAssignments(string linesStr)
+        {
+            var lines = linesStr.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var line in lines)
+            {
+                if (line.StartsWith(";") || line.StartsWith("#") || line.StartsWith("//"))
+                    continue;
+
+                var vm = new HotkeyAssignmentViewModel();
+                var spl = line.Split(' ');
+
+                for (int j = 0; j < spl.Length; j++)
+                {
+                    var s = spl[j];
+
+                    if (ModMap.ContainsKey(s))
+                    {
+                        if (ModMap[s].HasFlag(Modifiers.CTRL)) vm.HotkeyModifiers |= ModifierKeys.Control;
+                        if (ModMap[s].HasFlag(Modifiers.SHIFT)) vm.HotkeyModifiers |= ModifierKeys.Shift;
+                        if (ModMap[s].HasFlag(Modifiers.ALT)) vm.HotkeyModifiers |= ModifierKeys.Alt;
+                        if (ModMap[s].HasFlag(Modifiers.WIN)) vm.HotkeyModifiers |= ModifierKeys.Windows;
+                    }
+                    else if (KeyMap.ContainsKey(s))
+                    {
+                        vm.HotkeyKey = KeyMap[s];
+                    }
+                    else if (ActionMap.ContainsKey(s))
+                    {
+                        vm.Action = ActionMap[s];
+
+                        // If this action needs a parameter, grab the next token
+                        if (vm.NeedsParam && j + 1 < spl.Length)
+                        {
+                            vm.Param = spl[j + 1];
+                            j++;
+                        }
+                    }
+                }
+
+                if (vm.HotkeyKey != Key.None && vm.Action != 0)
+                {
+                    HotkeyAssignments.Add(vm);
+                }
+            }
         }
 
         private void AddHotkey_Click(object sender, RoutedEventArgs e)
@@ -49,9 +103,11 @@ namespace EldenRingTool
         private void RemoveRow_Click(object sender, RoutedEventArgs e)
         {
             var button = sender as Button;
-            var vm = button.DataContext as HotkeyAssignmentViewModel;
+            var vm = button?.DataContext as HotkeyAssignmentViewModel;
             if (vm != null)
+            {
                 HotkeyAssignments.Remove(vm);
+            }
         }
 
         private void HotkeyTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -99,11 +155,38 @@ namespace EldenRingTool
         {
             if (OwnerAsMainWindow != null)
             {
-                OwnerAsMainWindow.UpdateHotkeys(ModMap, KeyMap, ActionMap);
+                OwnerAsMainWindow.registeredHotkeys.Clear();
+
+                var lines = new List<string>();
+                foreach (var assignment in HotkeyAssignments)
+                {
+                    var parts = new List<string>();
+
+                    if ((assignment.HotkeyModifiers & ModifierKeys.Control) != 0) parts.Add("CTRL");
+                    if ((assignment.HotkeyModifiers & ModifierKeys.Alt) != 0) parts.Add("ALT");
+                    if ((assignment.HotkeyModifiers & ModifierKeys.Shift) != 0) parts.Add("SHIFT");
+                    if ((assignment.HotkeyModifiers & ModifierKeys.Windows) != 0) parts.Add("WIN");
+
+                    if (assignment.HotkeyKey != Key.None)
+                        parts.Add(assignment.HotkeyKey.ToString().ToUpper());
+
+                    parts.Add(assignment.Action.ToString());
+
+                    if (assignment.NeedsParam && !string.IsNullOrWhiteSpace(assignment.Param))
+                        parts.Add(assignment.Param);
+
+                    lines.Add(string.Join(" ", parts));
+                }
+
+                string joined = string.Join(Environment.NewLine, lines);
+
+                File.WriteAllText(MainWindow.hotkeyFile(), joined);
+
+                OwnerAsMainWindow.parseHotkeys(joined);
             }
 
-            this.DialogResult = true;
-            this.Close();
+            DialogResult = true;
+            Close();
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e)
@@ -120,7 +203,7 @@ namespace EldenRingTool
         private string _hotkeyText;
         public string HotkeyText
         {
-            get => HotkeyString; // display
+            get => HotkeyString;
             set
             {
                 _hotkeyText = value;
@@ -128,7 +211,6 @@ namespace EldenRingTool
             }
         }
 
-        // Separate key and modifier properties
         private Key _hotkeyKey = Key.None;
         public Key HotkeyKey
         {
@@ -143,7 +225,6 @@ namespace EldenRingTool
             set { _hotkeyModifiers = value; OnPropertyChanged(nameof(HotkeyModifiers)); OnPropertyChanged(nameof(HotkeyString)); }
         }
 
-        // Display string for the DataGrid
         public string HotkeyString
         {
             get
@@ -184,5 +265,4 @@ namespace EldenRingTool
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
-
 }

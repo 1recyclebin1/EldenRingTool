@@ -40,7 +40,7 @@
                 </DataGridComboBoxColumn>
 
                 <!-- Hotkey column -->
-                <DataGridTemplateColumn Header="Hotkey" Width="*">
+                <DataGridTemplateColumn Header="Hotkey" Width="200">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBox Text="{Binding HotkeyText, Mode=TwoWay}"
@@ -50,7 +50,7 @@
                 </DataGridTemplateColumn>
 
                 <!-- Remove button -->
-                <DataGridTemplateColumn Width="Auto">
+                <DataGridTemplateColumn Width="*">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Button Content="Remove" Click="RemoveRow_Click"/>

@@ -117,7 +117,7 @@ namespace EldenRingTool
         Dictionary<string, HOTKEY_ACTIONS> actionMap = new Dictionary<string, HOTKEY_ACTIONS>();
         Dictionary<string, Key> keyMap = new Dictionary<string, Key>();
 
-        Dictionary<Tuple<Key, Modifiers>, List<HotkeyAction>> registeredHotkeys =
+        public Dictionary<Tuple<Key, Modifiers>, List<HotkeyAction>> registeredHotkeys =
             new Dictionary<Tuple<Key, Modifiers>, List<HotkeyAction>>();
 
         (float, float, float) lastPos = (0, 0, 0);
@@ -155,7 +155,7 @@ namespace EldenRingTool
             return Utils.getFnameInAppdata(hotkeyFileName, "ERTool");
         }
 
-        static string hotkeyFile()
+        public static string hotkeyFile()
         {//local file can override (an older tool version used a local file)
             if (File.Exists(hotkeyFileName)) { return hotkeyFileName; }
             return getHotkeyFileAppData();
@@ -347,7 +347,7 @@ namespace EldenRingTool
             }
         }
 
-        bool parseHotkeys(string linesStr = null)
+        public bool parseHotkeys(string linesStr = null)
         {
             try
             {
@@ -1187,20 +1187,27 @@ namespace EldenRingTool
 
         private void newHotkeySetup(object sender, RoutedEventArgs e)
         {
-            var hotkeySetup = new HotkeySetupWindow(modMap, keyMap, actionMap);
+            string existingHotkeys = null;
+            string path = hotkeyFile();
+            if (File.Exists(path))
+            {
+                existingHotkeys = File.ReadAllText(path);
+            }
 
-            hotkeySetup.WindowStartupLocation = WindowStartupLocation.Manual;
-            hotkeySetup.Left = this.Left + this.Width + 10;
-            hotkeySetup.Top = this.Top;
-
-            hotkeySetup.Owner = this;
+            var hotkeySetup = new HotkeySetupWindow(modMap, keyMap, actionMap, existingHotkeys)
+            {
+                Owner = this
+            };
 
             bool? result = hotkeySetup.ShowDialog();
 
             if (result == true)
             {
-                // User confirmed, safe to pull data from hotkeySetup
-                // e.g. copy back its HotkeyAssignments, or use its maps
+                Utils.debugWrite("Hotkeys updated successfully.");
+            }
+            else
+            {
+                Utils.debugWrite("Hotkey setup canceled.");
             }
         }
 
