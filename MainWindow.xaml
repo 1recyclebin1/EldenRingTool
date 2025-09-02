@@ -184,14 +184,14 @@
                     <StackPanel Orientation="Horizontal">
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
-                        <Button Click="setGameSpeed" Margin="1,0,5,0" Content="Set Game Speed"/>
-                        <Button Click="setTargetFPS" Margin="0,0" Content="Set Max FPS" ToolTip="Should be used with windowed or borderless mode"/>
-                        <Button Click="openMenu" Margin="5,0,0,0" Content="Open Menu"/>
-                        <Button Click="flags" Margin="5,0,0,0" Content="Flags"/>
-                        <Button Click="setClearCount" Margin="5,0,0,0" Content="NG+"/>
+                        <Button Click="unlockGraces" Margin="1,5,0,0" Content="Unlock Graces"/>
+                        <Button Click="openMenu" Margin="5,5,0,0" Content="Open Menu"/>
+                        <Button Click="setClearCount" Margin="5,5,0,0" Content="NG+"/>
+                        <Button Click="flags" Margin="5,5,0,0" Content="Flags"/>
                     </StackPanel>
-                    <StackPanel>
-                        <Button Click="unlockGraces" Margin="5,0,0,0" Content="Unlock Graces"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Click="setGameSpeed" Margin="1,5,5,0" Content="Set Game Speed"/>
+                        <Button Click="setTargetFPS" Margin="0,5,0,0" Content="Set Max FPS" ToolTip="Should be used with windowed or borderless mode"/>
                     </StackPanel>
                 </StackPanel>
                 <DockPanel x:Name="QoLPanelControl" Height="16" MouseLeftButtonDown="dockPanel_MouseLeftButtonDown" Tag="{Binding ElementName=QoLPanel}">

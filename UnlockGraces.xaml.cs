@@ -33,10 +33,8 @@ namespace EldenRingTool
 
             _process = process;
 
-            // Excluded Areas (optional)
             var excludedGraces = new List<string> { "Show underground", "Table of Lost Grace / Roundtable Hold" };
 
-            // Group all graces into Area → SubArea → Grace
             var grouped = GraceDB.Graces
                 .Where(g => !excludedGraces.Contains(g.Area))
                 .GroupBy(g => g.Area)
@@ -54,7 +52,6 @@ namespace EldenRingTool
             foreach (var area in grouped)
                 AvailableGracesGrouped.Add(area);
 
-            // Create _allGraces copy for filtering
             foreach (var area in AvailableGracesGrouped)
             {
                 AreaGroup copyArea = new AreaGroup
@@ -76,7 +73,6 @@ namespace EldenRingTool
                 _allGraces.Add(copyArea);
             }
 
-            // SelectedGraces events
             SelectedGraces.CollectionChanged += (s, e) =>
             {
                 ActivateSelectedButton.IsEnabled = SelectedGraces.Any();
@@ -162,7 +158,14 @@ namespace EldenRingTool
 
         private void FilterBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            ApplyFilter(FilterBox.Text);
+            if (string.IsNullOrEmpty(FilterBox.Text))
+            {
+                CollapseAllTreeViewItems();
+            }
+            else
+            {
+                ApplyFilter(FilterBox.Text);
+            }
         }
 
         private void ClearFilter_Click(object sender, RoutedEventArgs e)
@@ -205,9 +208,7 @@ namespace EldenRingTool
                 foreach (SubAreaGroup sub in area.SubAreas)
                 {
                     List<Grace> matchingGraces = sub.Graces
-                        .Where(g => g.Name.ToLower().Contains(filter)
-                                 || g.SubArea.ToLower().Contains(filter)
-                                 || g.Area.ToLower().Contains(filter))
+                        .Where(g => g.Name.ToLower().Contains(filter))
                         .ToList();
 
                     if (matchingGraces.Any())
@@ -245,6 +246,30 @@ namespace EldenRingTool
                 }
             }));
         }
+
+        private void CollapseAllTreeViewItems()
+        {
+            AvailableGracesTree.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                foreach (var areaItem in AvailableGracesTree.Items)
+                {
+                    TreeViewItem tviArea = AvailableGracesTree.ItemContainerGenerator.ContainerFromItem(areaItem) as TreeViewItem;
+                    if (tviArea != null)
+                    {
+                        tviArea.IsExpanded = false;
+                        tviArea.UpdateLayout();
+
+                        foreach (var subItem in tviArea.Items)
+                        {
+                            TreeViewItem tviSub = tviArea.ItemContainerGenerator.ContainerFromItem(subItem) as TreeViewItem;
+                            if (tviSub != null)
+                                tviSub.IsExpanded = false;
+                        }
+                    }
+                }
+            }));
+        }
+
 
         #endregion
 

@@ -2320,8 +2320,8 @@ namespace EldenRingTool
         {
             _data.Add("Base Maps", importIDNameTsv("BaseMaps.tsv"));
             _data.Add("DLC Maps", importIDNameTsv("DLCMaps.tsv"));
-            _data.Add("Base Graces", importIDNameTsv("BaseGraces.tsv"));
-            _data.Add("DLC Graces", importIDNameTsv("DLCGraces.tsv"));
+            //_data.Add("Base Graces", importIDNameTsv("BaseGraces.tsv"));
+            //_data.Add("DLC Graces", importIDNameTsv("DLCGraces.tsv"));
             _data.Add("Base Bosses", importIDNameTsv("BaseBosses.tsv"));
             _data.Add("DLC Bosses", importIDNameTsv("DLCBosses.tsv"));
             _loaded = true;
