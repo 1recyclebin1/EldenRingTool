@@ -182,8 +182,6 @@ namespace EldenRingTool
             Title = "ERTool v" + assInfo.Version;
             _normalTitle = Title;
 
-            new GraceDB();
-
             Closing += MainWindow_Closing;
             Closed += MainWindow_Closed;
             Loaded += MainWindow_Loaded;
@@ -235,6 +233,7 @@ namespace EldenRingTool
 
             }
 
+            new GraceDB(_process.exeSupportsDlc());
         }
 
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)

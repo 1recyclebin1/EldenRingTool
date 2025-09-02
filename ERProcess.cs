@@ -2320,8 +2320,8 @@ namespace EldenRingTool
         {
             _data.Add("Base Maps", importIDNameTsv("BaseMaps.tsv"));
             _data.Add("DLC Maps", importIDNameTsv("DLCMaps.tsv"));
-            _data.Add("Base Graces", importIDNameTsv("BaseGraces.tsv"));
-            _data.Add("DLC Graces", importIDNameTsv("DLCGraces.tsv"));
+            //_data.Add("Base Graces", importIDNameTsv("BaseGraces.tsv"));
+            //_data.Add("DLC Graces", importIDNameTsv("DLCGraces.tsv"));
             _data.Add("Base Bosses", importIDNameTsv("BaseBosses.tsv"));
             _data.Add("DLC Bosses", importIDNameTsv("DLCBosses.tsv"));
             _loaded = true;
@@ -2357,9 +2357,14 @@ namespace EldenRingTool
     {
         static List<Grace> graces = new List<Grace>();
 
-        public GraceDB()
+        public GraceDB(bool supportsDlc)
         {
             graces = importIDNameTsv("BaseGraces.tsv");
+            if (supportsDlc)
+            {
+                var dlcGraces = importIDNameTsv("DLCGraces.tsv");
+                graces.AddRange(dlcGraces);
+            }
         }
 
         public static List<Grace> importIDNameTsv(string file)
@@ -2413,21 +2418,7 @@ namespace EldenRingTool
     {
         public string Area { get; set; }
         public List<SubAreaGroup> SubAreas { get; set; } = new List<SubAreaGroup>();
-        public List<Grace> GracesWithoutSubArea { get; set; } = new List<Grace>();
-
-        public IEnumerable<object> Children
-        {
-            get
-            {
-                foreach (var g in GracesWithoutSubArea)
-                    yield return g;
-                foreach (var s in SubAreas)
-                    yield return s;
-            }
-        }
     }
-
-
 
     public class ExtraFlag
     {
