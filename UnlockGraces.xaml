@@ -33,16 +33,19 @@
                       SelectedItemChanged="AvailableGraces_SelectedItemChanged"
                       ItemsSource="{Binding AvailableGracesGrouped}"
                       Grid.Column="0">
+
                 <TreeView.Resources>
-                    <!-- Area -->
-                    <HierarchicalDataTemplate DataType="{x:Type local:AreaGroup}" ItemsSource="{Binding Children}">
+                    <!-- Area level -->
+                    <HierarchicalDataTemplate DataType="{x:Type local:AreaGroup}" ItemsSource="{Binding SubAreas}">
                         <TextBlock Text="{Binding Area}" FontWeight="Bold"/>
                     </HierarchicalDataTemplate>
-                    <!-- SubArea -->
+
+                    <!-- SubArea level -->
                     <HierarchicalDataTemplate DataType="{x:Type local:SubAreaGroup}" ItemsSource="{Binding Graces}">
                         <TextBlock Text="{Binding SubArea}" FontStyle="Italic"/>
                     </HierarchicalDataTemplate>
-                    <!-- Grace -->
+
+                    <!-- Grace level -->
                     <DataTemplate DataType="{x:Type local:Grace}">
                         <TextBlock Text="{Binding Name}"/>
                     </DataTemplate>
@@ -78,7 +81,7 @@
                 <Button x:Name="ActivateGroupButton" Content="Activate Group" Width="100" Margin="6,0,0,0" Click="ActivateGroup_Click"/>
             </StackPanel>
         </Grid>
-        
+
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
             <TextBlock Text="Profile:" VerticalAlignment="Center" Margin="0,0,6,0"/>
             <ComboBox x:Name="ProfileComboBox"
