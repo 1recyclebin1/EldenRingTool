@@ -329,7 +329,7 @@ namespace EldenRingTool
                 ProfileComboBox.SelectedItem = profileName;
                 HasUnsavedChanges = false;
 
-                MessageBox.Show($"Profile '{profileName}' saved/updated!");
+                MessageBox.Show($"Profile '{profileName}' saved!");
             }
         }
 
@@ -340,19 +340,30 @@ namespace EldenRingTool
             string profileName = ProfileComboBox.SelectedItem.ToString();
             if (!File.Exists(ProfilesFile)) return;
 
-            var lines = File.ReadAllLines(ProfilesFile).ToList();
-            var removed = lines.RemoveAll(l => l.StartsWith(profileName + ":"));
+            var result = MessageBox.Show(
+                $"Are you sure you want to delete '{profileName}'?",
+                "Confirm Delete",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
 
-            if (removed > 0)
+            if (result == MessageBoxResult.Yes)
             {
-                File.WriteAllLines(ProfilesFile, lines);
-                LoadProfilesIntoComboBox();
+                var lines = File.ReadAllLines(ProfilesFile).ToList();
+                var removed = lines.RemoveAll(l => l.StartsWith(profileName + ":"));
 
-                SelectedGraces.Clear();
+                if (removed > 0)
+                {
+                    File.WriteAllLines(ProfilesFile, lines);
+                    LoadProfilesIntoComboBox();
 
-                HasUnsavedChanges = false;
-                MessageBox.Show($"Profile '{profileName}' deleted.");
+                    SelectedGraces.Clear();
+
+                    HasUnsavedChanges = false;
+                    MessageBox.Show($"Profile '{profileName}' deleted.");
+                }
             }
+
+
         }
 
         private void ProfileComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
