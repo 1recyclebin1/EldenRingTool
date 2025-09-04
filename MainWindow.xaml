@@ -320,7 +320,7 @@
                 <CheckBox Checked="enableUpdateCheck" Unchecked="disableUpdateCheck" FontSize="10" Margin="5,0" x:Name="chkAutoUpdate">Auto update check</CheckBox>
                 <Button Click="goToWebsite" FontSize="10" x:Name="websiteButton" Margin="2,0">Visit Homepage</Button>
                 <!--<Button Click="hotkeySetup" FontSize="10" HorizontalAlignment="Right" Margin="2,0" x:Name="btnHotkeys">Hotkey Setup</Button>-->
-                <Button Click="newHotkeySetup" FontSize="10" HorizontalAlignment="Right" Margin="2,0" x:Name="btnNewHotkeys">New Hotkey Setup</Button>
+                <Button Click="newHotkeySetup" FontSize="10" HorizontalAlignment="Right" Margin="2,0" x:Name="btnNewHotkeys">Hotkey Setup</Button>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="0,0" x:Name="resizePanel">
                 <CheckBox Checked="stayOnTop" Unchecked="dontStayOnTop" FontSize="10" Margin="5,0" x:Name="chkStayOnTop">Stay on top</CheckBox>
