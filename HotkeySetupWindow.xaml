@@ -12,57 +12,49 @@
 
     <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Add row button -->
-        <Button Grid.Row="0" Content="Add Hotkey" Width="100" Height="30" Click="AddHotkey_Click" />
-
         <!-- Hotkeys DataGrid -->
-        <DataGrid Grid.Row="1" x:Name="HotkeysGrid" AutoGenerateColumns="False" CanUserAddRows="False" ItemsSource="{Binding HotkeyAssignments}">
-            <DataGrid.Columns>
-                <!-- Action selector -->
-                <DataGridComboBoxColumn Header="Action"
-                        SelectedItemBinding="{Binding Action, Mode=TwoWay}"
-                        Width="200">
-                    <DataGridComboBoxColumn.ElementStyle>
-                        <Style TargetType="ComboBox">
-                            <Setter Property="ItemsSource" Value="{Binding DataContext.AllActions, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                        </Style>
-                    </DataGridComboBoxColumn.ElementStyle>
-                    <DataGridComboBoxColumn.EditingElementStyle>
-                        <Style TargetType="ComboBox">
-                            <Setter Property="ItemsSource" Value="{Binding DataContext.AllActions, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                        </Style>
-                    </DataGridComboBoxColumn.EditingElementStyle>
-                </DataGridComboBoxColumn>
+        <DataGrid Grid.Row="0" x:Name="HotkeysGrid"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  ItemsSource="{Binding HotkeyAssignments}">
 
-                <!-- Hotkey column -->
+            <DataGrid.Columns>
+                <!-- Action -->
+                <DataGridTextColumn Header="Action"
+                                    Binding="{Binding ActionDisplay}"
+                                    IsReadOnly="True"
+                                    Width="200" />
+
+                <!-- Hotkey input -->
                 <DataGridTemplateColumn Header="Hotkey" Width="200">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <TextBox Text="{Binding HotkeyText, Mode=TwoWay}"
-                                    PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"/>
+                            <TextBox Text="{Binding HotkeyString, Mode=OneWay}" 
+                                     PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"
+                                     IsReadOnly="True"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
-                <!-- Remove button -->
-                <DataGridTemplateColumn Width="*">
+                <!-- Parameter -->
+                <DataGridTemplateColumn Header="Parameter" Width="*">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <Button Content="Remove" Click="RemoveRow_Click"/>
+                            <TextBox Text="{Binding Param, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Visibility="{Binding NeedsParam, Converter={StaticResource BoolToVisibilityConverter}}"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
 
-
         <!-- OK/Cancel -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
             <Button Content="OK" Width="75" Margin="5" Click="Ok_Click"/>
             <Button Content="Cancel" Width="75" Margin="5" Click="Cancel_Click"/>
         </StackPanel>
