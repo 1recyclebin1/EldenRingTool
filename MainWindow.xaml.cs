@@ -154,6 +154,10 @@ namespace EldenRingTool
         {
             return Utils.getFnameInAppdata(hotkeyFileName, "ERTool");
         }
+        public static string getBuildsFileAppData()
+        {
+            return Utils.getFnameInAppdata("builds.txt", "ERTool");
+        }
 
         public static string hotkeyFile()
         {//local file can override (an older tool version used a local file)
@@ -453,15 +457,6 @@ namespace EldenRingTool
             return sb.ToString();
         }
 
-        void backupHotkeyFile()
-        {
-            try
-            {
-                File.Copy(hotkeyFile(), hotkeyFile() + ".bak", true);
-            }
-            catch { }
-        }
-
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             try
@@ -471,6 +466,8 @@ namespace EldenRingTool
 
                 //hotkeys
                 setUpMapsForHotkeys();
+
+                generateDefaultBuildsFile();
 
                 if (File.Exists(hotkeyFileName) && !File.Exists(getHotkeyFileAppData()))
                 {
@@ -494,6 +491,43 @@ namespace EldenRingTool
             loadWindowState(); //restore last state if saved
 
             maybeDoUpdateCheck();
+        }
+
+        void generateDefaultBuildsFile()
+        {
+            try
+            {
+                string buildsFileName = getBuildsFileAppData();
+
+                if (File.Exists(buildsFileName))
+                {
+                    return;
+                }
+
+                var assembly = Assembly.GetExecutingAssembly();
+                string resourceName = assembly.GetManifestResourceNames()
+                  .Single(str => str.EndsWith("default_builds.txt")); 
+
+                using (var stream = assembly.GetManifestResourceStream(resourceName))
+                {
+                    if (stream == null)
+                    {
+                        Console.WriteLine("Embedded resource not found: " + resourceName);
+                        return;
+                    }
+
+                    using (var reader = new StreamReader(stream))
+                    {
+                        var sourceData = reader.ReadToEnd();
+                        File.WriteAllText(buildsFileName, sourceData);
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error creating default builds file: " + ex.Message);
+            }
         }
 
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)

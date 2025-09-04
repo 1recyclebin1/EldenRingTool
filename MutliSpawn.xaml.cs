@@ -21,7 +21,7 @@ namespace EldenRingTool
 
 
         private Dictionary<string, List<string>> builds = new Dictionary<string, List<string>>();
-        private string buildsFile = "builds.txt";
+        private string buildsFile = MainWindow.getBuildsFileAppData();
         private bool hasUnsavedChanges = false;
 
         public const string EMPTY_BUILD_NAME = "<New Profile>";
