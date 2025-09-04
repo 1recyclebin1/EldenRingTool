@@ -18,7 +18,7 @@ namespace EldenRingTool
 
         private List<AreaGroup> _allGraces = new List<AreaGroup>(); // master copy for filtering
         private bool _hasUnsavedChanges;
-        private string ProfilesFile => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Profiles.txt");
+        private string ProfilesFile => MainWindow.getGraceProfilesFileAppData();
 
         public bool HasUnsavedChanges
         {
@@ -119,8 +119,30 @@ namespace EldenRingTool
 
         private void AddGrace_Click(object sender, RoutedEventArgs e)
         {
-            if (AvailableGracesTree.SelectedItem is Grace g && !SelectedGraces.Contains(g))
-                SelectedGraces.Add(g);
+            if (AvailableGracesTree.SelectedItem is Grace g)
+            {
+                if (!SelectedGraces.Contains(g))
+                    SelectedGraces.Add(g);
+            }
+            else if (AvailableGracesTree.SelectedItem is SubAreaGroup sub)
+            {
+                foreach (var grace in sub.Graces)
+                {
+                    if (!SelectedGraces.Contains(grace))
+                        SelectedGraces.Add(grace);
+                }
+            }
+            else if (AvailableGracesTree.SelectedItem is AreaGroup area)
+            {
+                foreach (var subarea in area.SubAreas)
+                {
+                    foreach (var grace in subarea.Graces)
+                    {
+                        if (!SelectedGraces.Contains(grace))
+                            SelectedGraces.Add(grace);
+                    }
+                }
+            }
         }
 
         private void RemoveGrace_Click(object sender, RoutedEventArgs e)

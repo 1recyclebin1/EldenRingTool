@@ -159,6 +159,11 @@ namespace EldenRingTool
             return Utils.getFnameInAppdata("builds.txt", "ERTool");
         }
 
+        public static string getGraceProfilesFileAppData()
+        {
+            return Utils.getFnameInAppdata("grace_profiles.txt", "ERTool");
+        }
+
         public static string hotkeyFile()
         {//local file can override (an older tool version used a local file)
             if (File.Exists(hotkeyFileName)) { return hotkeyFileName; }
@@ -469,6 +474,8 @@ namespace EldenRingTool
 
                 generateDefaultBuildsFile();
 
+                generateDefaultGraceProfiles();
+
                 if (File.Exists(hotkeyFileName) && !File.Exists(getHotkeyFileAppData()))
                 {
                     MessageBox.Show("Hotkey mapping will be moved to AppData. Shift-click Hotkey Setup if you need to access this folder.");
@@ -493,7 +500,7 @@ namespace EldenRingTool
             maybeDoUpdateCheck();
         }
 
-        void generateDefaultBuildsFile()
+        private void generateDefaultBuildsFile()
         {
             try
             {
@@ -520,6 +527,43 @@ namespace EldenRingTool
                     {
                         var sourceData = reader.ReadToEnd();
                         File.WriteAllText(buildsFileName, sourceData);
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error creating default builds file: " + ex.Message);
+            }
+        }
+
+        private void generateDefaultGraceProfiles()
+        {
+            try
+            {
+                string graceProfilesFilename = getGraceProfilesFileAppData();
+
+                if (File.Exists(graceProfilesFilename))
+                {
+                    return;
+                }
+
+                var assembly = Assembly.GetExecutingAssembly();
+                string resourceName = assembly.GetManifestResourceNames()
+                  .Single(str => str.EndsWith("grace_profiles.txt"));
+
+                using (var stream = assembly.GetManifestResourceStream(resourceName))
+                {
+                    if (stream == null)
+                    {
+                        Console.WriteLine("Embedded resource not found: " + resourceName);
+                        return;
+                    }
+
+                    using (var reader = new StreamReader(stream))
+                    {
+                        var sourceData = reader.ReadToEnd();
+                        File.WriteAllText(graceProfilesFilename, sourceData);
                     }
                 }
 

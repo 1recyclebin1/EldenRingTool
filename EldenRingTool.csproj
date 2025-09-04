@@ -172,5 +172,8 @@
   <ItemGroup>
     <EmbeddedResource Include="default_builds.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="grace_profiles.txt" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
