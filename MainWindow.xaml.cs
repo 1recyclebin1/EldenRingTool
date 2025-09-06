@@ -92,7 +92,12 @@ namespace EldenRingTool
             public HOTKEY_ACTIONS actID { get; set; } = 0;
             public bool needsParam()
             {
-                return actID == HOTKEY_ACTIONS.FPS;
+                List<HOTKEY_ACTIONS> actionsWithParams = new List<HOTKEY_ACTIONS>
+                { 
+                    HOTKEY_ACTIONS.FPS, 
+                    HOTKEY_ACTIONS.SET_HP_LAST 
+                };
+                return actionsWithParams.Contains(actID);
             }
             public string someParam { get; set; } = null;
             public override string ToString()
@@ -428,40 +433,6 @@ namespace EldenRingTool
             return false;
         }
 
-        void clearRegisteredHotkeys()
-        {
-            registeredHotkeys.Clear();
-        }
-
-        string generateDefaultHotkeyFile(bool writeOut = true)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine(";Set hotkeys below. Some example hotkeys are provided.");
-            sb.AppendLine(";If you don't want to use hotkeys, just remove all the hotkeys listed.");
-            sb.AppendLine(";Restart ERTool after updating the hotkeys, or ctrl+click the hotkeys button.");
-            sb.AppendLine(";Lines starting with ; are ignored.");
-            sb.AppendLine(";All text is case-sensitive.");
-            sb.AppendLine(";Note that these are global hotkeys and may conflict with other applications. If a given key doesn't work, try using a modifier. (Eg. F12 may not work but CTRL F12 should.) Some of the more obscure keys may also not work.");
-            sb.AppendLine(";To generate a fresh hotkey file, alt+click the hotkey setup button.");
-            sb.Append(";Valid actions:");
-            foreach (var kvp in actionMap) { sb.Append(" " + kvp.Key); }
-            sb.AppendLine();
-            sb.Append(";Valid modifier keys:");
-            foreach (var kvp in modMap) { sb.Append(" " + kvp.Key); }
-            sb.AppendLine();
-            sb.Append(";Valid keys:");
-            foreach (var kvp in keyMap) { sb.Append(" " + kvp.Key); }
-            sb.AppendLine();
-
-            sb.AppendLine($"{Modifiers.CTRL} {Modifiers.SHIFT} {Key.Z} {HOTKEY_ACTIONS.QUITOUT}");
-            sb.AppendLine($"{Modifiers.CTRL} {Modifiers.SHIFT} {Key.C} {HOTKEY_ACTIONS.TELEPORT_SAVE}");
-            sb.AppendLine($"{Modifiers.CTRL} {Modifiers.SHIFT} {Key.V} {HOTKEY_ACTIONS.TELEPORT_LOAD}");
-            sb.AppendLine($"{Modifiers.CTRL} {Modifiers.SHIFT} {Key.K} {HOTKEY_ACTIONS.KILL_TARGET}");
-
-            if (writeOut) { File.WriteAllText(hotkeyFile(), sb.ToString()); }
-            return sb.ToString();
-        }
-
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             try
@@ -632,7 +603,24 @@ namespace EldenRingTool
                 case HOTKEY_ACTIONS.ALL_NO_DEATH: chkAllNoDeath.IsChecked ^= true; break;
                 case HOTKEY_ACTIONS.ONE_HP: chkOneHP.IsChecked ^= true; break;
                 case HOTKEY_ACTIONS.MAX_HP: chkMaxHP.IsChecked ^= true; break;
-                case HOTKEY_ACTIONS.SET_HP_LAST: if (lastSetHP.HasValue) { _process.getSetPlayerHP(lastSetHP.Value); } break;
+                case HOTKEY_ACTIONS.SET_HP_LAST:
+                    {
+                        var hpVal = 1;
+                        if (lastSetHP.HasValue) 
+                        { 
+                            hpVal = (int)lastSetHP.Value;
+                        }
+                        else if (!string.IsNullOrEmpty(action.someParam) && int.TryParse(action.someParam, out var targetHpVal))
+                        {
+                            hpVal = targetHpVal;
+                        }
+                        else
+                        {
+                            Utils.debugWrite("Error parsing HP Val");
+                        }
+                         _process.getSetPlayerHP(hpVal); 
+                    }
+                    break;
                 case HOTKEY_ACTIONS.DIE: instantDeath(null, null); break;
                 case HOTKEY_ACTIONS.RUNE_ARC: chkRuneArc.IsChecked ^= true; break;
                 case HOTKEY_ACTIONS.DISABLE_AI: chkDisableAI.IsChecked ^= true; break;
