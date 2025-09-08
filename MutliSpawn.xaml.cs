@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -109,16 +111,36 @@ namespace EldenRingTool
 
         private void FilterBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            string filter = FilterBox.Text.ToLower();
+            string filter = RemoveDiacritics(FilterBox.Text).ToLowerInvariant();
 
             AvailableItemsView.Filter = item =>
             {
                 if (item is Item i)
                 {
-                    return i.Name.ToLower().Contains(filter);
+                    string name = RemoveDiacritics(i.Name).ToLowerInvariant();
+                    return name.Contains(filter);
                 }
                 return false;
             };
+        }
+
+        private static string RemoveDiacritics(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return string.Empty;
+
+            var normalized = text.Normalize(NormalizationForm.FormD);
+            var sb = new StringBuilder(normalized.Length);
+
+            foreach (char c in normalized)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                {
+                    sb.Append(c);
+                }
+            }
+
+            return sb.ToString().Normalize(NormalizationForm.FormC);
         }
 
         private void ClearFilter_Click(object sender, RoutedEventArgs e)
