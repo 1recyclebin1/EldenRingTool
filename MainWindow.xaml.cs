@@ -368,7 +368,7 @@ namespace EldenRingTool
                 string[] lines;
                 if (!string.IsNullOrEmpty(linesStr))
                 {
-                    lines = linesStr.Split('\r', '\n');
+                    lines = linesStr.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
                 }
                 else
                 {
