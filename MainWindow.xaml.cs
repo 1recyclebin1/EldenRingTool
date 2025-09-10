@@ -1526,7 +1526,7 @@ namespace EldenRingTool
 
             freezeHPPanel.Visibility = Visibility.Collapsed;
             BottomPanelButtons.Visibility = Visibility.Collapsed;
-            updatePanel.Visibility = Visibility.Collapsed;
+            //updatePanel.Visibility = Visibility.Collapsed;
 
             isCompact = true;
         }
@@ -1537,7 +1537,7 @@ namespace EldenRingTool
 
             freezeHPPanel.Visibility = Visibility.Visible;
             BottomPanelButtons.Visibility = Visibility.Visible;
-            updatePanel.Visibility = Visibility.Visible;
+            //updatePanel.Visibility = Visibility.Visible;
 
             isCompact = false;
         }
