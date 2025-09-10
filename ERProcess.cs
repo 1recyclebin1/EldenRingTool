@@ -1,15 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Reflection;
-using System.IO;
-using EldenRingTool.Util;
+﻿using EldenRingTool.Util;
 using MiscUtils;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Threading;
+using static EldenRingTool.ERProcess;
 
 namespace EldenRingTool
 {
@@ -22,7 +23,7 @@ namespace EldenRingTool
         int erSize = 0;
 
         protected bool disposed = false;
-        
+
         [DllImport("kernel32.dll")]
         private static extern IntPtr OpenProcess(uint dwDesiredAcess, bool bInheritHandle, int dwProcessId);
 
@@ -46,13 +47,13 @@ namespace EldenRingTool
 
         [DllImport("kernel32.dll")]
         private static extern bool CloseHandle(IntPtr hObject);
-        
+
         public const uint MemCommit = 0x1000;
         public const uint MemReserve = 0x2000;
         public const uint PageExecuteReadwrite = 0x40;
         [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, uint dwSize, 
-            uint flAllocationType = MemCommit | MemReserve, 
+        public static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, uint dwSize,
+            uint flAllocationType = MemCommit | MemReserve,
             uint flProtect = PageExecuteReadwrite
         );
 
@@ -69,7 +70,7 @@ namespace EldenRingTool
         HookManager _hookManager;
         public ERProcess()
         {
-         
+
             _hookManager = new HookManager(this);
             findAttach();
             findBaseAddress();
@@ -338,6 +339,13 @@ namespace EldenRingTool
             MAGIC, FIRE, LIGHTNING, HOLY,
         }
 
+        public enum ItemCategory 
+        { 
+            NONE,
+            SMITHING,
+            SOMBER
+        }
+
         const long SANE_MINIMUM = 0x700000000000;
         const long SANE_MAXIMUM = 0x800000000000; //TODO: refine. much lower addresses may be valid in some cases.
 
@@ -384,15 +392,15 @@ namespace EldenRingTool
 
         //int freeCamPatchLoc = 0x415305;
         int freeCamPatchLocAlt = 0xDB8A00; //1st addr after call (a jmp)
-        
+
         int freeCamPlayerControlPatchLoc = 0x664EE6;
-        
+
         int mapOpenInCombatOff = 0x7CB4D3;
         int mapStayOpenInCombatOff = 0x979AE7;
 
         //DbgGetForceActIdx. patch changes it to use the addr from DbgSetLastActIdx 
         int enemyRepeatActionOff = 0x4F22456;
-        
+
         int zeroCaveOffset = 0x28E3E00; //zeroes at the end of the program
         int warpFirstCallOffset = 0x5DDE30;
         int warpSecondCallOffset = 0x65E260;
@@ -454,8 +462,8 @@ namespace EldenRingTool
         private int _hasSpEffectHook;
         private int _infinitePoiseHook;
         private int _blueTargetViewHook;
-      
-        
+
+
 
         //scanning for above addresses
         void aobScan()
@@ -463,7 +471,7 @@ namespace EldenRingTool
             var sw = new Stopwatch();
             sw.Start();
             var scanner = new AOBScanner(_targetProcessHandle, erBase, erSize);
-            
+
             worldChrManOff = scanner.findAddr(scanner.sectionOne, scanner.textOneAddr, "E8 ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 4C 8B A8 ?? ?? ?? ?? 4D 85 ED 0F 84 ?? ?? ?? ??", "CS::WorldChrManImp", 5 + 3, 5 + 3 + 4, startIndex: 1800000);
             worldChrManPlayerOff2 = (uint)scanner.findAddr(scanner.sectionOne, scanner.textOneAddr, "E8 ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 4C 8B A8 ?? ?? ?? ?? 4D 85 ED 0F 84 ?? ?? ?? ??", "CS::WorldChrManImp offset", 5 + 7 + 3, startIndex: 1800000);
             hitboxBase = scanner.findAddr(scanner.sectionOne, scanner.textOneAddr, "48 8B0D ???????? E8 ???????? F3 0F1057 ?? 48 8BCB 0FB693 ????0000 E8 ???????? 48 8BCB E8 ???????? 48 8B0D ????????", "hitboxBase", 1 + 2, 1 + 2 + 4, startIndex: 10900000);
@@ -564,7 +572,7 @@ namespace EldenRingTool
             _hasSpEffectHook = scanner.findAddr(scanner.sectionOne, scanner.textOneAddr, "39 51 08 74 0C 48 8B", "HasSpEffect", justOffset: -0x10);
             _blueTargetViewHook = scanner.findAddr(scanner.sectionOne, scanner.textOneAddr, "0F 84 41 01 00 00 48 8D 54", "BlueTargetViewHook", justOffset: 0x6);
             _infinitePoiseHook = scanner.findAddr(scanner.sectionOne, scanner.textOneAddr, "80 BF 5F 02", "InfinitePoise", justOffset: 0);
-            
+
             var cave = "";
             for (int i = 0; i < 0xA0; i++) { cave += "90"; }
             codeCavePtrLoc = scanner.findAddr(scanner.sectionOne, scanner.textOneAddr, cave, "codeCave_0x60_nops", startIndex: 100000);
@@ -1015,7 +1023,7 @@ namespace EldenRingTool
                 Console.WriteLine("Unexpected code at hook location");
                 return false;
             }
-            
+
             var caveCheck1 = ReadUInt64(erBase + codeCavePtrLoc);
             var caveCheck2 = ReadUInt64(erBase + codeCaveCodeLoc);
             if (caveCheck1 != 0x9090909090909090 || caveCheck2 != 0x9090909090909090) //byte reversal doesn't matter
@@ -1088,13 +1096,13 @@ namespace EldenRingTool
                 case DebugOpts.CHARACTER_MESH: return (erBase + meshesOff + 3, 1);
                 case DebugOpts.HITBOX_VIEW_A:
                 case DebugOpts.HITBOX_VIEW_B:
-                {
-                    var ptr = ReadUInt64(erBase + hitboxBase);
-                    if (ptr < SANE_MINIMUM) { return badVal; }
-                    if (opt == DebugOpts.HITBOX_VIEW_A) { ptr += hitboxOffset; }
-                    else { ptr += hitboxOffset + 1; }
-                    return ((IntPtr)ptr, 1);
-                }
+                    {
+                        var ptr = ReadUInt64(erBase + hitboxBase);
+                        if (ptr < SANE_MINIMUM) { return badVal; }
+                        if (opt == DebugOpts.HITBOX_VIEW_A) { ptr += hitboxOffset; }
+                        else { ptr += hitboxOffset + 1; }
+                        return ((IntPtr)ptr, 1);
+                    }
                 case DebugOpts.DISABLE_MOST_RENDER: return (erBase + groupMaskBase, 0); //TODO: re-check offsets for other patches (especially 1.05)
                 case DebugOpts.DISABLE_MAP: return (erBase + groupMaskBase + 1, 0);
                 case DebugOpts.DISABLE_TREES: return (erBase + groupMaskTrees, 0);
@@ -1104,146 +1112,146 @@ namespace EldenRingTool
                 case DebugOpts.DISABLE_GRASS: return (erBase + groupMaskTrees + 8, 0);
 
                 case DebugOpts.NO_DEATH:
-                {
-                    var ptr4 = getCharPtrModules();
-                    var ptr5 = ReadUInt64((IntPtr)(ptr4 + 0)); //CS::CSChrDataModule
-                    var ptr6 = (IntPtr)(ptr5 + noDeathOffset);
-                    return (ptr6, 0x10); //bitfield, bit 0
-                }
+                    {
+                        var ptr4 = getCharPtrModules();
+                        var ptr5 = ReadUInt64((IntPtr)(ptr4 + 0)); //CS::CSChrDataModule
+                        var ptr6 = (IntPtr)(ptr5 + noDeathOffset);
+                        return (ptr6, 0x10); //bitfield, bit 0
+                    }
                 case DebugOpts.ALL_CHR_NO_DEATH:
-                {
-                    return (erBase + allChrNoDeath, 1);
-                }
+                    {
+                        return (erBase + allChrNoDeath, 1);
+                    }
                 case DebugOpts.ONE_HP:
                 case DebugOpts.MAX_HP:
-                {
-                    var ptr4 = getCharPtrModules();
-                    var ptr5 = ReadUInt64((IntPtr)(ptr4 + 0)); //CS::CSChrDataModule
-                    var ptr6 = (IntPtr)(ptr5 + 0x138);
-                    if (opt == DebugOpts.MAX_HP) { return (ptr6, 0xfe); }
-                    return (ptr6, 0xff);
-                }
+                    {
+                        var ptr4 = getCharPtrModules();
+                        var ptr5 = ReadUInt64((IntPtr)(ptr4 + 0)); //CS::CSChrDataModule
+                        var ptr6 = (IntPtr)(ptr5 + 0x138);
+                        if (opt == DebugOpts.MAX_HP) { return (ptr6, 0xfe); }
+                        return (ptr6, 0xff);
+                    }
                 case DebugOpts.RUNE_ARC:
-                {
-                    //var ptrAlternate = getPlayerGameDataPtr();
-                    var ptr = getCharPtrGameData();
-                    return ((IntPtr)ptr + 0xFF, 1);
-                }
+                    {
+                        //var ptrAlternate = getPlayerGameDataPtr();
+                        var ptr = getCharPtrGameData();
+                        return ((IntPtr)ptr + 0xFF, 1);
+                    }
                 case DebugOpts.INSTANT_QUITOUT:
-                {
-                    var ptr = ReadUInt64(erBase + quitoutBase);
-                    return ((IntPtr)(ptr + 0x10), 1);
-                }
+                    {
+                        var ptr = ReadUInt64(erBase + quitoutBase);
+                        return ((IntPtr)(ptr + 0x10), 1);
+                    }
                 case DebugOpts.DISABLE_AI:
-                {
-                    return (erBase + noAiUpdate, 1);
-                }
+                    {
+                        return (erBase + noAiUpdate, 1);
+                    }
                 case DebugOpts.NO_GOODS:
-                {
-                    return (erBase + noGoodsConsume, 1);
-                }
+                    {
+                        return (erBase + noGoodsConsume, 1);
+                    }
                 case DebugOpts.NO_STAM:
-                {
-                    return (erBase + noGoodsConsume + 1, 1);
-                }
+                    {
+                        return (erBase + noGoodsConsume + 1, 1);
+                    }
                 case DebugOpts.NO_FP:
-                {
-                    return (erBase + noGoodsConsume + 2, 1);
-                }
+                    {
+                        return (erBase + noGoodsConsume + 2, 1);
+                    }
                 case DebugOpts.NO_ARROWS:
-                {
-                    return (erBase + noGoodsConsume + 3, 1);
-                }
+                    {
+                        return (erBase + noGoodsConsume + 3, 1);
+                    }
                 case DebugOpts.ONE_SHOT:
-                {
-                    return (erBase + noGoodsConsume - 1, 1);
-                }
+                    {
+                        return (erBase + noGoodsConsume - 1, 1);
+                    }
                 case DebugOpts.NO_GRAVITY_ALTERNATE: //not currently used
-                {//this is the "another no gravity" pointer. there is another flag available (the not-another one)
-                    //this one makes the player float up slightly. it blocks teleport
-                    //the other one does not cause a float but allows teleport. hmmm.
-                    var ptr2 = getPlayerInsPtr();
-                    return ((IntPtr)(ptr2 + 0x1C4), 0x15);
-                }
+                    {//this is the "another no gravity" pointer. there is another flag available (the not-another one)
+                     //this one makes the player float up slightly. it blocks teleport
+                     //the other one does not cause a float but allows teleport. hmmm.
+                        var ptr2 = getPlayerInsPtr();
+                        return ((IntPtr)(ptr2 + 0x1C4), 0x15);
+                    }
                 case DebugOpts.NO_GRAVITY:
-                {
-                    var ptr3 = getCharPtrModules();
-                    var ptr4 = ReadUInt64((IntPtr)(ptr3 + 0x68)); //CS::CSChrPhysicsModule
-                    return ((IntPtr)(ptr4 + 0x1D3), 1);
-                }
+                    {
+                        var ptr3 = getCharPtrModules();
+                        var ptr4 = ReadUInt64((IntPtr)(ptr3 + 0x68)); //CS::CSChrPhysicsModule
+                        return ((IntPtr)(ptr4 + 0x1D3), 1);
+                    }
                 case DebugOpts.NO_MAP_COLLISION:
-                {
-                    var ptr2 = getPlayerInsPtr();
-                    var ptr3 = ReadUInt64((IntPtr)(ptr2 + 0x58));
-                    return ((IntPtr)(ptr3 + 0xF0), 0x13);
-                }
+                    {
+                        var ptr2 = getPlayerInsPtr();
+                        var ptr3 = ReadUInt64((IntPtr)(ptr2 + 0x58));
+                        return ((IntPtr)(ptr3 + 0xF0), 0x13);
+                    }
                 case DebugOpts.TOP_DEBUG_MENU:
-                {//gone in recent patches. Sadge.
-                    var ptr = ReadUInt64(erBase + newMenuSystem);
-                    return ((IntPtr)(ptr + 0x891), 1);
-                }
+                    {//gone in recent patches. Sadge.
+                        var ptr = ReadUInt64(erBase + newMenuSystem);
+                        return ((IntPtr)(ptr + 0x891), 1);
+                    }
                 case DebugOpts.POISE_VIEW:
-                {
-                    var ptr = ReadUInt64(erBase + chrDbg);
-                    return ((IntPtr)(ptr + 0x69), 1);
-                }
+                    {
+                        var ptr = ReadUInt64(erBase + chrDbg);
+                        return ((IntPtr)(ptr + 0x69), 1);
+                    }
                 case DebugOpts.TORRENT_NO_DEATH:
-                {
-                    var ptr1 = getTorrentPtr();
-                    var ptr2 = ReadUInt64((IntPtr)(ptr1 + 0x190));
-                    var ptr3 = ReadUInt64((IntPtr)(ptr2 + 0)); //CS::CSChrDataModule
-                    return ((IntPtr)(ptr3 + noDeathOffset), 0x10); //same offset as player no death
-                }
+                    {
+                        var ptr1 = getTorrentPtr();
+                        var ptr2 = ReadUInt64((IntPtr)(ptr1 + 0x190));
+                        var ptr3 = ReadUInt64((IntPtr)(ptr2 + 0)); //CS::CSChrDataModule
+                        return ((IntPtr)(ptr3 + noDeathOffset), 0x10); //same offset as player no death
+                    }
                 case DebugOpts.TORRENT_NO_GRAV_ALT: //not currently used
-                {//this is the 'another no grav' flag, equivalent to the player version.
-                    var ptr1 = getTorrentPtr();
-                    return ((IntPtr)(ptr1 + 0x1C4), 0x15);
-                }
+                    {//this is the 'another no grav' flag, equivalent to the player version.
+                        var ptr1 = getTorrentPtr();
+                        return ((IntPtr)(ptr1 + 0x1C4), 0x15);
+                    }
                 case DebugOpts.TORRENT_NO_GRAV:
-                {
-                    var ptr1 = getTorrentPtr();
-                    var ptr2 = ReadUInt64((IntPtr)(ptr1 + 0x190));
-                    var ptr3 = ReadUInt64((IntPtr)(ptr2 + 0x68)); //CS::CSChrPhysicsModule
-                    return ((IntPtr)(ptr3 + 0x1D3), 1);
-                }
+                    {
+                        var ptr1 = getTorrentPtr();
+                        var ptr2 = ReadUInt64((IntPtr)(ptr1 + 0x190));
+                        var ptr3 = ReadUInt64((IntPtr)(ptr2 + 0x68)); //CS::CSChrPhysicsModule
+                        return ((IntPtr)(ptr3 + 0x1D3), 1);
+                    }
                 case DebugOpts.TORRENT_NO_MAP_COLL:
-                {
-                    var ptr1 = getTorrentPtr();
-                    var ptr2 = ReadUInt64((IntPtr)(ptr1 + 0x58));
-                    return ((IntPtr)(ptr2 + 0xF0), 0x13);
-                }
+                    {
+                        var ptr1 = getTorrentPtr();
+                        var ptr2 = ReadUInt64((IntPtr)(ptr1 + 0x58));
+                        return ((IntPtr)(ptr2 + 0xF0), 0x13);
+                    }
                 case DebugOpts.EVENT_DRAW:
-                {
-                    var ptr1 = ReadUInt64(erBase + DbgEventManOff);
-                    return ((IntPtr)(ptr1 + 0x4), 1);
-                }
+                    {
+                        var ptr1 = ReadUInt64(erBase + DbgEventManOff);
+                        return ((IntPtr)(ptr1 + 0x4), 1);
+                    }
                 case DebugOpts.EVENT_STOP:
-                {
-                    var ptr1 = ReadUInt64(erBase + DbgEventManOff);
-                    return ((IntPtr)(ptr1 + 0x28), 1);
-                }
+                    {
+                        var ptr1 = ReadUInt64(erBase + DbgEventManOff);
+                        return ((IntPtr)(ptr1 + 0x28), 1);
+                    }
                 case DebugOpts.FREE_CAM:
-                {
-                    var ptr1 = ReadUInt64(erBase + FieldAreaOff);
-                    var ptr2 = ReadUInt64((IntPtr)(ptr1 + 0x20)); //CS::GameRend
-                    return ((IntPtr)(ptr2 + 0xC8), 1);
-                }
+                    {
+                        var ptr1 = ReadUInt64(erBase + FieldAreaOff);
+                        var ptr2 = ReadUInt64((IntPtr)(ptr1 + 0x20)); //CS::GameRend
+                        return ((IntPtr)(ptr2 + 0xC8), 1);
+                    }
                 case DebugOpts.DISABLE_STEAM_INPUT_ENUM:
-                {
-                    var ptr = ReadUInt64(erBase + usrInputMgrImplOff);
-                    return ((IntPtr)(ptr + usrInputMgrImpSteamInputFlagOff), 1);
-                }
+                    {
+                        var ptr = ReadUInt64(erBase + usrInputMgrImplOff);
+                        return ((IntPtr)(ptr + usrInputMgrImpSteamInputFlagOff), 1);
+                    }
                 case DebugOpts.DISABLE_STEAM_ACHIVEMENTS:
-                {
-                    var ptr = ReadUInt64(erBase + trophyImpOffset);
-                    var ptr2 = ReadUInt64((IntPtr)ptr + 8);
-                    return ((IntPtr)ptr2 + 0x4c, 0); //not sure if offset is patch stable, but it's likely as it's a fairly low offset
-                }
+                    {
+                        var ptr = ReadUInt64(erBase + trophyImpOffset);
+                        var ptr2 = ReadUInt64((IntPtr)ptr + 8);
+                        return ((IntPtr)ptr2 + 0x4c, 0); //not sure if offset is patch stable, but it's likely as it's a fairly low offset
+                    }
                 case DebugOpts.TARGETING_VIEW:
-                {
-                    var ptr = erBase + allTargetingDebugDraw;
-                    return (ptr, 1);
-                }
+                    {
+                        var ptr = erBase + allTargetingDebugDraw;
+                        return (ptr, 1);
+                    }
             }
             return badVal;
         }
@@ -1464,13 +1472,13 @@ namespace EldenRingTool
                 case TargetInfo.POISE_TIMER:
                     p3off = 0x1c; break;
                 default:
-                {//assume resists
-                    int poisonOff = info - TargetInfo.POISON;
-                    int statIndex = poisonOff / 2;
-                    bool isMax = (poisonOff % 2) == 1;
-                    p3off = (uint)((isMax ? 0x2c : 0x10) + 4 * statIndex);
-                    break;
-                }
+                    {//assume resists
+                        int poisonOff = info - TargetInfo.POISON;
+                        int statIndex = poisonOff / 2;
+                        bool isMax = (poisonOff % 2) == 1;
+                        p3off = (uint)((isMax ? 0x2c : 0x10) + 4 * statIndex);
+                        break;
+                    }
             }
             var pFinal = (IntPtr)(p2 + p3off);
 
@@ -1513,7 +1521,7 @@ namespace EldenRingTool
         int levelOffset = 0x68; //same
         public readonly string[] STAT_NAMES = new string[] { "Vigor", "Mind", "Endurance", "Strength", "Dexterity", "Intelligence", "Faith", "Arcane" };
         public readonly string[] DLC_STAT_NAMES = new string[] { "Scadu", "Ash" };
-        public List<(string, int)> getSetPlayerStats(List<(string,int)> newStats = null)
+        public List<(string, int)> getSetPlayerStats(List<(string, int)> newStats = null)
         {
             var ptr = (IntPtr)getCharPtrGameData();
             var ret = new List<(string, int)>();
@@ -1559,7 +1567,7 @@ namespace EldenRingTool
             WriteUInt8(ptr + triggerNGPlusOffset, 1);
         }
 
-        public (float, float, float) getSetPlayerLocalCoords((float,float,float)? pos = null)
+        public (float, float, float) getSetPlayerLocalCoords((float, float, float)? pos = null)
         {
             var ptr4 = getCharPtrModules();
             var ptr5 = ReadUInt64((IntPtr)(ptr4 + 0x68)); //CS::CSChrPhysicsModule
@@ -1786,7 +1794,7 @@ namespace EldenRingTool
             LocationMode = 0x28,
             Location = 0x30,
         }
-        public (IntPtr,int) getEventFlagLocAndBit(int flag)
+        public (IntPtr, int) getEventFlagLocAndBit(int flag)
         {
             var evtFlagMan = (IntPtr)ReadUInt64(erBase + csEventFlagMan);
             int divisor = ReadInt32(evtFlagMan + (int)CSFD4VirtualMemoryFlag.EventFlagDivisor); //in practice this should never change. could just hardcode to 1000
@@ -1904,11 +1912,11 @@ namespace EldenRingTool
             IntPtr searchRangeEnd = erBase - 0x30000;
             uint codeCaveSize = 0x2000;
             IntPtr allocatedMemory;
-        
+
             for (IntPtr addr = searchRangeEnd; addr.ToInt64() > searchRangeStart.ToInt64(); addr -= 0x10000)
             {
                 allocatedMemory = VirtualAllocEx(_targetProcessHandle, addr, codeCaveSize);
-        
+
                 if (allocatedMemory != IntPtr.Zero)
                 {
                     CodeCaveOffsets.Base = allocatedMemory;
@@ -1928,7 +1936,7 @@ namespace EldenRingTool
                 var bytes = BitConverter.GetBytes(erBase.ToInt64() + worldChrManOff);
                 var hook = erBase.ToInt64() + _blueTargetViewHook;
                 Array.Copy(bytes, 0, codeBytes, 0x36 + 2, 8);
-                AsmHelper.WriteRelativeOffsets(codeBytes, new []
+                AsmHelper.WriteRelativeOffsets(codeBytes, new[]
                 {
                     (code.ToInt64() + 0x86, maxDist.ToInt64(), 8, 0x86 + 4 ),
                     (code.ToInt64() + 0xC4, hook + 0x5, 5, 0xC4 + 1),
@@ -1942,9 +1950,9 @@ namespace EldenRingTool
             {
                 _hookManager.UninstallHook(code.ToInt64());
             }
-            
+
         }
-        
+
         public void SetTargetViewMaxDist(float reducedTargetViewDistance)
         {
             var maxDist = CodeCaveOffsets.Base + (int)CodeCaveOffsets.ReducedTargetView.MaxDist;
@@ -1985,7 +1993,7 @@ namespace EldenRingTool
                     (hook, 7, code + 0x1D, 0x1D + 1),
                     (hook, 7, code + 0x2A, 0x2A + 1),
                 });
-               WriteBytes(code, codeBytes);
+                WriteBytes(code, codeBytes);
                 _hookManager.InstallHook(code.ToInt64(), hook, new byte[]
                     { 0x80, 0xBF, 0x5F, 0x02, 0x00, 0x00, 0x00 });
             }
@@ -1995,7 +2003,7 @@ namespace EldenRingTool
             }
         }
 
-        public void ForceSave() => 
+        public void ForceSave() =>
             WriteUInt8((IntPtr)ReadInt64(erBase + quitoutBase) + 0xb72, 1);
     }
 
@@ -2149,14 +2157,14 @@ namespace EldenRingTool
 
     public class ItemDB
     {
-        static List<(string, uint)> items = new System.Collections.Generic.List<(string, uint)>();
-        static List<(string, uint)> infusions = new System.Collections.Generic.List<(string, uint)>();
-        static List<(string, uint)> ashes = new System.Collections.Generic.List<(string, uint)>();
+        static List<(string, uint, ItemCategory)> items = new System.Collections.Generic.List<(string, uint, ItemCategory)>();
+        static List<(string, uint, ItemCategory)> infusions = new System.Collections.Generic.List<(string, uint, ItemCategory)>();
+        static List<(string, uint, ItemCategory)> ashes = new System.Collections.Generic.List<(string, uint, ItemCategory)>();
         static bool _loaded = false;
 
-        static List<(string, uint)> importNameIDCSV(string name, System.Globalization.NumberStyles numType = System.Globalization.NumberStyles.HexNumber)
+        static List<(string, uint, ItemCategory)> importNameIDCSV(string name, System.Globalization.NumberStyles numType = System.Globalization.NumberStyles.HexNumber)
         {
-            var ret = new List<(string, uint)>();
+            var ret = new List<(string, uint, ItemCategory)>();
             try
             {
                 var assembly = Assembly.GetExecutingAssembly();
@@ -2164,17 +2172,30 @@ namespace EldenRingTool
                 using (Stream stream = assembly.GetManifestResourceStream(resourceName))
                 using (StreamReader reader = new StreamReader(stream))
                 {
-                    var header = reader.ReadLine();
-                    var headerSplit = header.Split(',');
+                    var header = reader.ReadLine(); // throw away header
                     string line = "";
                     while ((line = reader.ReadLine()) != null)
                     {
-                        var lastCommaPos = line.LastIndexOf(',');
-                        if (lastCommaPos < 0) { continue; }
-                        var nm = line.Substring(0, lastCommaPos);
-                        var idStr = line.Substring(lastCommaPos + 1);
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+
+                        // get category
+                        int lastComma = line.LastIndexOf(',');
+                        if (lastComma < 0) continue;
+                        var category = Enum.TryParse<ItemCategory>(line.Substring(lastComma + 1), ignoreCase: true, out var parsed)
+                            ? parsed
+                            : ItemCategory.NONE;
+
+                        // get id
+                        string beforeLast = line.Substring(0, lastComma);
+                        int secondLastComma = beforeLast.LastIndexOf(',');
+                        if (secondLastComma < 0) continue;
+                        string idStr = beforeLast.Substring(secondLastComma + 1).Trim();
                         var id = uint.Parse(idStr, numType);
-                        ret.Add((nm, id));
+
+                        // get name
+                        string itemName = beforeLast.Substring(0, secondLastComma).Trim();
+
+                        ret.Add((itemName, id, category));
                     }
                 }
                 return ret;
@@ -2184,16 +2205,22 @@ namespace EldenRingTool
                 return ret;
             }
         }
+
         static void loadDB()
         {
             if (_loaded) { return; }
 
-            ashes = importNameIDCSV("ashes.csv"); //TODO: just init with Default and then take from item list
-            infusions = importNameIDCSV("infusions.csv", System.Globalization.NumberStyles.Number);
             var itemsTemp = importNameIDCSV("items.csv");
+            infusions = importNameIDCSV("infusions.csv", System.Globalization.NumberStyles.Number);
             //sort order can be a bit jank so just re sort it now
             itemsTemp.Sort((x, y) =>
             {
+                bool xIsAbout = x.Item1.StartsWith("About ", StringComparison.OrdinalIgnoreCase);
+                bool yIsAbout = y.Item1.StartsWith("About ", StringComparison.OrdinalIgnoreCase);
+
+                if (xIsAbout && !yIsAbout) return 1;
+                if (!xIsAbout && yIsAbout) return -1;
+
                 if (x.Item1 == y.Item1) { return x.Item2.CompareTo(y.Item2); }
                 return x.Item1.CompareTo(y.Item1);
             });
@@ -2217,12 +2244,22 @@ namespace EldenRingTool
                     dupeCount[name] = ++count;
                     name = $"{name} #{count}";
                 }
-                items.Add((name, item.Item2));
+                items.Add((name, item.Item2, item.Item3));
             }
+
+            ashes = items.Where(x => x.Item1.StartsWith("Ash of War: ", StringComparison.OrdinalIgnoreCase))
+                .Select(x =>
+                {
+                    string nameWithoutPrefix = x.Item1.Substring("Ash of War: ".Length).Trim();
+                    return (nameWithoutPrefix, x.Item2, x.Item3);
+                })
+                .ToList();
+            ashes.Insert(0, ("Default", 0xFFFFFFFF, ItemCategory.NONE));
 
             _loaded = true;
         }
-        public static List<(string, uint)> Items
+
+        public static List<(string, uint, ItemCategory)> Items
         {
             get
             {
@@ -2230,7 +2267,7 @@ namespace EldenRingTool
                 return items;
             }
         }
-        public static List<(string, uint)> Infusions
+        public static List<(string, uint, ItemCategory)> Infusions
         {
             get
             {
@@ -2238,7 +2275,7 @@ namespace EldenRingTool
                 return infusions;
             }
         }
-        public static List<(string, uint)> Ashes
+        public static List<(string, uint, ItemCategory)> Ashes
         {
             get
             {
@@ -2283,8 +2320,8 @@ namespace EldenRingTool
         {
             _data.Add("Base Maps", importIDNameTsv("BaseMaps.tsv"));
             _data.Add("DLC Maps", importIDNameTsv("DLCMaps.tsv"));
-            _data.Add("Base Graces", importIDNameTsv("BaseGraces.tsv"));
-            _data.Add("DLC Graces", importIDNameTsv("DLCGraces.tsv"));
+            //_data.Add("Base Graces", importIDNameTsv("BaseGraces.tsv"));
+            //_data.Add("DLC Graces", importIDNameTsv("DLCGraces.tsv"));
             _data.Add("Base Bosses", importIDNameTsv("BaseBosses.tsv"));
             _data.Add("DLC Bosses", importIDNameTsv("DLCBosses.tsv"));
             _loaded = true;
@@ -2314,6 +2351,73 @@ namespace EldenRingTool
                 return _data;
             }
         }
+    }
+
+    public class GraceDB
+    {
+        static List<Grace> graces = new List<Grace>();
+
+        public GraceDB(bool supportsDlc)
+        {
+            graces = importIDNameTsv("BaseGraces.tsv");
+            if (supportsDlc)
+            {
+                var dlcGraces = importIDNameTsv("DLCGraces.tsv");
+                graces.AddRange(dlcGraces);
+            }
+        }
+
+        public static List<Grace> importIDNameTsv(string file)
+        {
+            var ret = new List<Grace>();
+            var list = FileUtils.importGenericTextResource(file, '\t');
+            foreach (var row in list.Skip(1))
+            {
+                if (row.Length < 2) continue;
+
+                if (!int.TryParse(row[0], out int id))
+                    continue;
+
+                var segments = row[1].Split(new[] { " - " }, StringSplitOptions.None);
+
+                var area = segments.Length > 0 ? segments[0] : "";
+                var subArea = segments.Length > 1 ? segments[1] : "";
+                var name = segments.Length > 2 ? string.Join(" - ", segments.Skip(2)) : "";
+
+                ret.Add(new Grace(id, area, subArea, name));
+            }
+            return ret;
+        }
+
+        public static List<Grace> Graces => graces;
+    }
+
+    public class Grace
+    {
+        public int ID { get; set; }
+        public string Area { get; set; }
+        public string SubArea { get; set; }
+        public string Name { get; set; }
+
+        public Grace(int id, string area, string subArea, string name)
+        {
+            ID = id;
+            Area = area;
+            SubArea = subArea;
+            Name = name;
+        }
+    }
+
+    public class SubAreaGroup
+    {
+        public string SubArea { get; set; }
+        public List<Grace> Graces { get; set; } = new List<Grace>();
+    }
+
+    public class AreaGroup
+    {
+        public string Area { get; set; }
+        public List<SubAreaGroup> SubAreas { get; set; } = new List<SubAreaGroup>();
     }
 
     public class ExtraFlag

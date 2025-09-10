@@ -34,7 +34,8 @@
                         <CheckBox Checked="oneShotOn" Unchecked="oneShotOff" Margin="13,0,0 ,0" x:Name="chkOneShot" Content="One-Shot"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                        <Button Click="spawnItem" Content="Spawn Item" Margin="1,0,5,0"/>
+                        <Button Click="spawnItem" Content="Spawn Item" Margin="1,0,5,0" Visibility="Collapsed"/>
+                        <Button Click="multiSpawn" Content="Spawn Items" Margin="1,0,5,0"/>
                         <Button Click="editStats" Margin="1,0,5,0" Content="Edit Stats"/>
                         <Button Click="addSouls" Content="Add 1M Runes" Margin="1,0,5,0" RenderTransformOrigin="1.746,-20.477"/>
                         <Button Click="btnSetPlayerHP_Click" x:Name="btnSetPlayerHP" Content="Set HP" Margin="1,0,5,0"/>
@@ -183,11 +184,14 @@
                     <StackPanel Orientation="Horizontal">
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
-                        <Button Click="setGameSpeed" Margin="1,0,5,0" Content="Set Game Speed"/>
-                        <Button Click="setTargetFPS" Margin="0,0" Content="Set Max FPS" ToolTip="Should be used with windowed or borderless mode"/>
-                        <Button Click="openMenu" Margin="5,0,0,0" Content="Open Menu"/>
-                        <Button Click="flags" Margin="5,0,0,0" Content="Flags"/>
-                        <Button Click="setClearCount" Margin="5,0,0,0" Content="NG+"/>
+                        <Button Click="unlockGraces" Margin="1,5,0,0" Content="Unlock Graces"/>
+                        <Button Click="openMenu" Margin="5,5,0,0" Content="Open Menu"/>
+                        <Button Click="setClearCount" Margin="5,5,0,0" Content="NG+"/>
+                        <Button Click="flags" Margin="5,5,0,0" Content="Flags"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Click="setGameSpeed" Margin="1,5,5,0" Content="Set Game Speed"/>
+                        <Button Click="setTargetFPS" Margin="0,5,0,0" Content="Set Max FPS" ToolTip="Should be used with windowed or borderless mode"/>
                     </StackPanel>
                 </StackPanel>
                 <DockPanel x:Name="QoLPanelControl" Height="16" MouseLeftButtonDown="dockPanel_MouseLeftButtonDown" Tag="{Binding ElementName=QoLPanel}">
@@ -201,6 +205,8 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <CheckBox Checked="muteMusic" Unchecked="unmuteMusic" x:Name="chkMuteMusic" Content="Mute Music"/>
+                        <CheckBox Checked="stayOnTop" Unchecked="dontStayOnTop" Margin="5,0" x:Name="chkStayOnTop">Stay on top</CheckBox>
+                        <CheckBox Checked="enableUpdateCheck" Unchecked="disableUpdateCheck" Margin="5,0" x:Name="chkAutoUpdate">Auto update check</CheckBox>
                     </StackPanel>
                 </StackPanel>
                 <Button Click="installTargetHook" Margin="0,5" x:Name="targetHookButton" Content="Enable target options"/>
@@ -274,21 +280,21 @@
                 <StackPanel x:Name="defensesPanel" Visibility="Collapsed">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="40px"/>   
-                            <ColumnDefinition Width="40px"/>   
-                            <ColumnDefinition Width="35px" />  
-                            <ColumnDefinition Width="40px"/>   
-                            <ColumnDefinition Width="40px"/>   
-                            <ColumnDefinition Width="40px"/>   
-                            <ColumnDefinition Width="55px" />     
-                            <ColumnDefinition Width="40px"/>   
+                            <ColumnDefinition Width="40px"/>
+                            <ColumnDefinition Width="40px"/>
+                            <ColumnDefinition Width="35px" />
+                            <ColumnDefinition Width="40px"/>
+                            <ColumnDefinition Width="40px"/>
+                            <ColumnDefinition Width="40px"/>
+                            <ColumnDefinition Width="55px" />
+                            <ColumnDefinition Width="40px"/>
                         </Grid.ColumnDefinitions>
 
                         <Grid.RowDefinitions>
                             <RowDefinition Height="*" />
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                    
+
                         <TextBlock Grid.Row="0" Grid.Column="0" x:Name="strikeText" HorizontalAlignment="Left" Margin="2,0">Strike:</TextBlock>
                         <TextBlock Grid.Row="0" Grid.Column="1" x:Name="strikeVal" Margin="2,0">--</TextBlock>
                         <TextBlock Grid.Row="0" Grid.Column="2" x:Name="slashText" HorizontalAlignment="Left">Slash:</TextBlock>
@@ -312,24 +318,21 @@
             </StackPanel>
         </StackPanel>
         <StackPanel DockPanel.Dock="Bottom" VerticalAlignment="Bottom" x:Name="bottomPanel">
-            <StackPanel Orientation="Horizontal" Margin="0,5,0,0" x:Name="updatePanel">
-                <CheckBox Checked="enableUpdateCheck" Unchecked="disableUpdateCheck" FontSize="10" Margin="5,0" x:Name="chkAutoUpdate">Auto update check</CheckBox>
-                <Button Click="goToWebsite" FontSize="10" x:Name="websiteButton" Margin="2,0">Visit Homepage</Button>
-                <Button Click="hotkeySetup" FontSize="10" HorizontalAlignment="Right" Margin="2,0" x:Name="btnHotkeys">Hotkey Setup</Button>
+            <StackPanel Orientation="Horizontal" Margin="0,5" x:Name="updatePanel">
+                <Button Click="newHotkeySetup" HorizontalAlignment="Right" Margin="2,0" x:Name="btnNewHotkeys">Hotkey Setup</Button>
+                <Button Click="toggleStatsFull" x:Name="compactButton" Margin="2,0">Toggle Stats/Full</Button>
+                <Button Click="toggleCoords" x:Name="coordsToggle" Margin="2,0">Toggle Coords</Button>
+                <Button Click="goToWebsite" x:Name="websiteButton" Margin="2,0"> Homepage</Button>
             </StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="0,0" x:Name="resizePanel">
-                <CheckBox Checked="stayOnTop" Unchecked="dontStayOnTop" FontSize="10" Margin="5,0" x:Name="chkStayOnTop">Stay on top</CheckBox>
-                <Button FontSize="10" Click="toggleStatsFull" x:Name="compactButton">Toggle Stats/Full</Button>
-                <!--<Button FontSize="10" Click="toggleResists" x:Name="resistsToggle" Margin="5,0">Toggle Resists</Button>-->
-                <Button FontSize="10" Click="toggleCoords" x:Name="coordsToggle" Margin="5,0">Toggle Coords</Button>
-            </StackPanel>
-            <Grid Margin="0,0">
+            <Grid x:Name="BottomPanelButtons" Margin="0,0">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="98*"/>
+                    <ColumnDefinition Width="17*"/>
+                    <ColumnDefinition Width="57*"/>
+                    <ColumnDefinition Width="173*"/>
                 </Grid.ColumnDefinitions>
-                <Button Click="doQuitout" Height="40" x:Name="quitoutButton" Grid.Column="0">Instant Quitout</Button>
-                <Button Click="doSave" Height="40" x:Name="saveButton" Grid.Column="1">Force Save</Button>
+                <Button Click="doQuitout" Height="40" x:Name="quitoutButton" Grid.Column="0" Grid.ColumnSpan="3">Instant Quitout</Button>
+                <Button Click="doSave" Height="40" x:Name="saveButton" Grid.Column="3">Quick Save</Button>
             </Grid>
         </StackPanel>
     </DockPanel>

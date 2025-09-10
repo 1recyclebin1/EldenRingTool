@@ -1,28 +1,20 @@
-﻿using System;
+﻿using MiscUtils;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using System.IO;
-using System.Diagnostics;
-using Microsoft.Win32;
-using System.Runtime.InteropServices;
 using System.Windows.Interop;
-using System.Threading;
-using System.Reflection;
-using EldenRingTool.Util;
-using MiscUtils;
-using System.Net.Http.Headers;
-using System.Net.Http;
+using System.Windows.Media;
 
 namespace EldenRingTool
 {
@@ -30,19 +22,29 @@ namespace EldenRingTool
     {
         //TODO: reorganise a bit.
 
-        [DllImport("User32.dll")]
-        private static extern bool RegisterHotKey(
-            [In] IntPtr hWnd,
-            [In] int id,
-            [In] uint fsModifiers,
-            [In] uint vk);
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
 
-        [DllImport("User32.dll")]
-        private static extern bool UnregisterHotKey(
-            [In] IntPtr hWnd,
-            [In] int id);
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
-        const int WM_HOTKEY = 0x0312;
+        private const int WH_KEYBOARD_LL = 13;
+        private const int WM_KEYDOWN = 0x0100;
+        private const int WM_SYSKEYDOWN = 0x0104;
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn,
+            IntPtr hMod, uint dwThreadId);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr GetModuleHandle(string lpModuleName);
 
         [Flags]
         public enum Modifiers
@@ -90,7 +92,12 @@ namespace EldenRingTool
             public HOTKEY_ACTIONS actID { get; set; } = 0;
             public bool needsParam()
             {
-                return actID == HOTKEY_ACTIONS.FPS;
+                List<HOTKEY_ACTIONS> actionsWithParams = new List<HOTKEY_ACTIONS>
+                { 
+                    HOTKEY_ACTIONS.FPS, 
+                    HOTKEY_ACTIONS.SET_HP_LAST 
+                };
+                return actionsWithParams.Contains(actID);
             }
             public string someParam { get; set; } = null;
             public override string ToString()
@@ -115,7 +122,8 @@ namespace EldenRingTool
         Dictionary<string, HOTKEY_ACTIONS> actionMap = new Dictionary<string, HOTKEY_ACTIONS>();
         Dictionary<string, Key> keyMap = new Dictionary<string, Key>();
 
-        Dictionary<int, List<HotkeyAction>> registeredHotkeys = new Dictionary<int, List<HotkeyAction>>();
+        public Dictionary<Tuple<Key, Modifiers>, List<HotkeyAction>> registeredHotkeys =
+            new Dictionary<Tuple<Key, Modifiers>, List<HotkeyAction>>();
 
         (float, float, float) lastPos = (0, 0, 0);
         (float, float, float) diffNormalisedLpf = (0, 0, 0);
@@ -151,8 +159,17 @@ namespace EldenRingTool
         {
             return Utils.getFnameInAppdata(hotkeyFileName, "ERTool");
         }
+        public static string getBuildsFileAppData()
+        {
+            return Utils.getFnameInAppdata("builds.txt", "ERTool");
+        }
 
-        static string hotkeyFile()
+        public static string getGraceProfilesFileAppData()
+        {
+            return Utils.getFnameInAppdata("grace_profiles.txt", "ERTool");
+        }
+
+        public static string hotkeyFile()
         {//local file can override (an older tool version used a local file)
             if (File.Exists(hotkeyFileName)) { return hotkeyFileName; }
             return getHotkeyFileAppData();
@@ -182,10 +199,10 @@ namespace EldenRingTool
             Closing += MainWindow_Closing;
             Closed += MainWindow_Closed;
             Loaded += MainWindow_Loaded;
-            
-            
 
-            retry:
+
+
+        retry:
             try
             {
                 _process = new ERProcess();
@@ -227,16 +244,17 @@ namespace EldenRingTool
                 _timer.Tick += _timer_Tick;
                 _timer.Interval = TimeSpan.FromSeconds(0.1); //~10hz UI update rate
                 _timer.Start();
-                
+
             }
 
+            new GraceDB(_process.exeSupportsDlc());
         }
 
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             try
             {
-                var windowInfo = 
+                var windowInfo =
                     $"{Left} " +
                     $"{Top} " +
                     $"{isCompact} " +
@@ -289,7 +307,7 @@ namespace EldenRingTool
                     chkSteamAchieve.IsChecked = bool.Parse(spl[4]);
                     chkMuteMusic.IsChecked = bool.Parse(spl[5]);
                 }
-                
+
                 if (spl.Length >= 9)
                 {
                     RestorePanelVisibility(PlayerPanelControl, PlayerPanel, spl[6]);
@@ -312,6 +330,20 @@ namespace EldenRingTool
         }
 
         //TODO: move hotkey stuff to utils?
+        private IntPtr _hookID = IntPtr.Zero;
+        private LowLevelKeyboardProc _proc;
+
+        private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+        private static IntPtr SetHook(LowLevelKeyboardProc proc)
+        {
+            using (var curProcess = Process.GetCurrentProcess())
+            using (var curModule = curProcess.MainModule)
+            {
+                return SetWindowsHookEx(WH_KEYBOARD_LL, proc,
+                    GetModuleHandle(curModule.ModuleName), 0);
+            }
+        }
 
         void setUpMapsForHotkeys()
         {
@@ -329,7 +361,7 @@ namespace EldenRingTool
             }
         }
 
-        bool parseHotkeys(string linesStr = null)
+        public bool parseHotkeys(string linesStr = null)
         {
             try
             {
@@ -382,84 +414,38 @@ namespace EldenRingTool
                     }
                 }
 
-                int i = 0;
                 foreach (var kvp in hotkeyMap)
                 {
-                    registeredHotkeys.Add(i, kvp.Value);
-                    RegisterHotKey(new WindowInteropHelper(this).Handle, i, (uint)kvp.Key.Item2, (uint)KeyInterop.VirtualKeyFromKey(kvp.Key.Item1));
-                    var debugStr = $"Hotkey {i} set: {kvp.Key} ->";
+                    var tuple = Tuple.Create(kvp.Key.Item1, kvp.Key.Item2);
+                    registeredHotkeys[tuple] = kvp.Value;
+
+                    var debugStr = $"Hotkey set: {kvp.Key} ->";
                     foreach (var act in kvp.Value)
                     {
                         debugStr += " " + act.ToString();
                     }
                     Utils.debugWrite(debugStr);
-                    i++;
                 }
-                btnHotkeys.Foreground = registeredHotkeys.Count > 0 ? Brushes.Blue : Brushes.Black;
+                //btnHotkeys.Foreground = registeredHotkeys.Count > 0 ? Brushes.Blue : Brushes.Black;
                 return true;
             }
             catch { }
             return false;
         }
 
-        void clearRegisteredHotkeys()
-        {
-            foreach (var h in registeredHotkeys)
-            {
-                UnregisterHotKey(new WindowInteropHelper(this).Handle, h.Key);
-            }
-            registeredHotkeys.Clear();
-        }
-
-        string generateDefaultHotkeyFile(bool writeOut = true)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine(";Set hotkeys below. Some example hotkeys are provided.");
-            sb.AppendLine(";If you don't want to use hotkeys, just remove all the hotkeys listed.");
-            sb.AppendLine(";Restart ERTool after updating the hotkeys, or ctrl+click the hotkeys button.");
-            sb.AppendLine(";Lines starting with ; are ignored.");
-            sb.AppendLine(";All text is case-sensitive.");
-            sb.AppendLine(";Note that these are global hotkeys and may conflict with other applications. If a given key doesn't work, try using a modifier. (Eg. F12 may not work but CTRL F12 should.) Some of the more obscure keys may also not work.");
-            sb.AppendLine(";To generate a fresh hotkey file, alt+click the hotkey setup button.");
-            sb.Append(";Valid actions:");
-            foreach (var kvp in actionMap) { sb.Append(" " + kvp.Key); }
-            sb.AppendLine();
-            sb.Append(";Valid modifier keys:");
-            foreach (var kvp in modMap) { sb.Append(" " + kvp.Key); }
-            sb.AppendLine();
-            sb.Append(";Valid keys:");
-            foreach (var kvp in keyMap) { sb.Append(" " + kvp.Key); }
-            sb.AppendLine();
-
-            sb.AppendLine($"{Modifiers.CTRL} {Modifiers.SHIFT} {Key.Z} {HOTKEY_ACTIONS.QUITOUT}");
-            sb.AppendLine($"{Modifiers.CTRL} {Modifiers.SHIFT} {Key.C} {HOTKEY_ACTIONS.TELEPORT_SAVE}");
-            sb.AppendLine($"{Modifiers.CTRL} {Modifiers.SHIFT} {Key.V} {HOTKEY_ACTIONS.TELEPORT_LOAD}");
-            sb.AppendLine($"{Modifiers.CTRL} {Modifiers.SHIFT} {Key.K} {HOTKEY_ACTIONS.KILL_TARGET}");
-
-            if (writeOut) { File.WriteAllText(hotkeyFile(), sb.ToString()); }
-            return sb.ToString();
-        }
-
-        void backupHotkeyFile()
-        {
-            try
-            {
-                File.Copy(hotkeyFile(), hotkeyFile() + ".bak", true);
-            }
-            catch { }
-        }
-
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             try
             {
-                //register for message passing
-                var source = PresentationSource.FromVisual(this as Visual) as HwndSource;
-                if (null == source) { Utils.debugWrite("Could not make hwnd source"); }
-                source.AddHook(WndProc);
+                _proc = HookCallback;
+                _hookID = SetHook(_proc);
 
                 //hotkeys
                 setUpMapsForHotkeys();
+
+                generateDefaultBuildsFile();
+
+                generateDefaultGraceProfiles();
 
                 if (File.Exists(hotkeyFileName) && !File.Exists(getHotkeyFileAppData()))
                 {
@@ -478,35 +464,115 @@ namespace EldenRingTool
                 {//none by default
                 }
             }
-            catch(Exception ex) { Utils.debugWrite(ex.ToString()); }
+            catch (Exception ex) { Utils.debugWrite(ex.ToString()); }
 
             loadWindowState(); //restore last state if saved
 
             maybeDoUpdateCheck();
         }
 
-        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        private void generateDefaultBuildsFile()
         {
-            if (msg == WM_HOTKEY)
+            try
             {
-                int id = wParam.ToInt32();
-                Utils.debugWrite($"Got hotkey id {id}");
-                if (!registeredHotkeys.ContainsKey(id))
+                string buildsFileName = getBuildsFileAppData();
+
+                if (File.Exists(buildsFileName))
                 {
-                    Utils.debugWrite($"Invalid hotkey {id}");
+                    return;
                 }
-                else
+
+                var assembly = Assembly.GetExecutingAssembly();
+                string resourceName = assembly.GetManifestResourceNames()
+                  .Single(str => str.EndsWith("default_builds.txt")); 
+
+                using (var stream = assembly.GetManifestResourceStream(resourceName))
                 {
-                    var actList = registeredHotkeys[id];
-                    foreach (var act in actList)
+                    if (stream == null)
                     {
-                        Utils.debugWrite($"Doing action {act}");
-                        doAct(act);
+                        Console.WriteLine("Embedded resource not found: " + resourceName);
+                        return;
                     }
+
+                    using (var reader = new StreamReader(stream))
+                    {
+                        var sourceData = reader.ReadToEnd();
+                        File.WriteAllText(buildsFileName, sourceData);
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error creating default builds file: " + ex.Message);
+            }
+        }
+
+        private void generateDefaultGraceProfiles()
+        {
+            try
+            {
+                string graceProfilesFilename = getGraceProfilesFileAppData();
+
+                if (File.Exists(graceProfilesFilename))
+                {
+                    return;
+                }
+
+                var assembly = Assembly.GetExecutingAssembly();
+                string resourceName = assembly.GetManifestResourceNames()
+                  .Single(str => str.EndsWith("grace_profiles.txt"));
+
+                using (var stream = assembly.GetManifestResourceStream(resourceName))
+                {
+                    if (stream == null)
+                    {
+                        Console.WriteLine("Embedded resource not found: " + resourceName);
+                        return;
+                    }
+
+                    using (var reader = new StreamReader(stream))
+                    {
+                        var sourceData = reader.ReadToEnd();
+                        File.WriteAllText(graceProfilesFilename, sourceData);
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error creating default builds file: " + ex.Message);
+            }
+        }
+
+        private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+        {
+            if (nCode >= 0 && (wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN))
+            {
+                int vkCode = Marshal.ReadInt32(lParam);
+                var key = (Key)KeyInterop.KeyFromVirtualKey(vkCode);
+
+                // gather current modifiers
+                var mods = Modifiers.NO_MOD;
+                if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+                    mods |= Modifiers.CTRL;
+                if (Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt))
+                    mods |= Modifiers.ALT;
+                if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
+                    mods |= Modifiers.SHIFT;
+                if (Keyboard.IsKeyDown(Key.LWin) || Keyboard.IsKeyDown(Key.RWin))
+                    mods |= Modifiers.WIN;
+
+                var tuple = Tuple.Create(key, mods);
+
+                if (registeredHotkeys.ContainsKey(tuple) && IsTargetAppFocused())
+                {
+                    foreach (var act in registeredHotkeys[tuple])
+                        doAct(act); 
                 }
             }
 
-            return IntPtr.Zero;
+            return CallNextHookEx(_hookID, nCode, wParam, lParam);
         }
 
         void doAct(HotkeyAction action)
@@ -537,7 +603,24 @@ namespace EldenRingTool
                 case HOTKEY_ACTIONS.ALL_NO_DEATH: chkAllNoDeath.IsChecked ^= true; break;
                 case HOTKEY_ACTIONS.ONE_HP: chkOneHP.IsChecked ^= true; break;
                 case HOTKEY_ACTIONS.MAX_HP: chkMaxHP.IsChecked ^= true; break;
-                case HOTKEY_ACTIONS.SET_HP_LAST: if (lastSetHP.HasValue) { _process.getSetPlayerHP(lastSetHP.Value); } break;
+                case HOTKEY_ACTIONS.SET_HP_LAST:
+                    {
+                        var hpVal = 1;
+                        if (lastSetHP.HasValue) 
+                        { 
+                            hpVal = (int)lastSetHP.Value;
+                        }
+                        else if (!string.IsNullOrEmpty(action.someParam) && int.TryParse(action.someParam, out var targetHpVal))
+                        {
+                            hpVal = targetHpVal;
+                        }
+                        else
+                        {
+                            Utils.debugWrite("Error parsing HP Val");
+                        }
+                         _process.getSetPlayerHP(hpVal); 
+                    }
+                    break;
                 case HOTKEY_ACTIONS.DIE: instantDeath(null, null); break;
                 case HOTKEY_ACTIONS.RUNE_ARC: chkRuneArc.IsChecked ^= true; break;
                 case HOTKEY_ACTIONS.DISABLE_AI: chkDisableAI.IsChecked ^= true; break;
@@ -610,6 +693,38 @@ namespace EldenRingTool
             }
         }
 
+        private bool IsTargetAppFocused()
+        {
+            IntPtr hwnd = GetForegroundWindow();
+            if (hwnd == IntPtr.Zero) return false;
+
+            GetWindowThreadProcessId(hwnd, out uint pid);
+            try
+            {
+                var procName = Process.GetProcessById((int)pid).ProcessName.ToLower() + ".exe";
+                bool isTargetExe = procName == "eldenring.exe" || procName == "eldenringtool.exe";
+
+                if (!isTargetExe)
+                    return false;
+
+                if (hwnd == new WindowInteropHelper(this).Handle)
+                    return true; 
+
+                foreach (Window owned in this.OwnedWindows)
+                {
+                    var ownedHwnd = new WindowInteropHelper(owned).Handle;
+                    if (hwnd == ownedHwnd)
+                        return false; 
+                }
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         void updateTargetInfo()
         {
             var hp = _process.getSetTargetInfo(ERProcess.TargetInfo.HP);
@@ -619,7 +734,7 @@ namespace EldenRingTool
             var poisetimer = _process.getSetTargetInfo(ERProcess.TargetInfo.POISE_TIMER);
             //Console.WriteLine($"{hp} {hpmax} {poise} {poisemax} {poisetimer}");
             if (double.IsNaN(hp)) { return; }
-            
+
             if (hpBar.Value > hpmax) { hpBar.Value = 0; }
             hpBar.Maximum = hpmax;
             hpBar.Value = hp > 0 ? hp : 0;
@@ -688,7 +803,7 @@ namespace EldenRingTool
             // 99.9% of defenses are multiples of 5, this is probably fine for all
             // Can use below if you want a fidelity of 1%
             //return (int)Math.Round((1.0 - _process.getTargetDefenses(type)) * 100);
-            
+
             return (int)(Math.Round((1.0 - _process.getTargetDefenses(type)) * 100 / 5.0) * 5);
         }
 
@@ -758,7 +873,7 @@ namespace EldenRingTool
         {
             var good = _process?.weGood ?? false;
             dockPanel.IsEnabled = good;
-            Title = good ? _normalTitle : "F?";
+            Title = good ? _normalTitle : "BlameLank";
 
             if (!good) { return; }
             if (_hooked)
@@ -775,7 +890,20 @@ namespace EldenRingTool
 
         private void MainWindow_Closed(object sender, EventArgs e)
         {
-            Dispose(true);
+            try
+            {
+                if (_hookID != IntPtr.Zero)
+                {
+                    UnhookWindowsHookEx(_hookID);
+                    _hookID = IntPtr.Zero;
+                }
+
+                registeredHotkeys.Clear();
+            }
+            catch (Exception ex)
+            {
+                Utils.debugWrite("Error unhooking keyboard: " + ex);
+            }
         }
 
         private void colMeshAOn(object sender, RoutedEventArgs e)
@@ -1123,45 +1251,39 @@ namespace EldenRingTool
             _process.addRunes(amt);
         }
 
-        private void hotkeySetup(object sender, RoutedEventArgs e)
+        private void newHotkeySetup(object sender, RoutedEventArgs e)
         {
-            if (Keyboard.IsKeyDown(Key.LeftCtrl))
+            string existingHotkeys = null;
+            string path = hotkeyFile();
+            if (File.Exists(path))
             {
-                clearRegisteredHotkeys();
-                if (!parseHotkeys())
-                {
-                    MessageBox.Show("Failed to parse hotkey file.");
-                }
-                else
-                {
-                    MessageBox.Show(registeredHotkeys.Count + " hotkeys registered.");
-                }
+                existingHotkeys = File.ReadAllText(path);
             }
-            else if (Keyboard.IsKeyDown(Key.LeftShift))
+
+            var hotkeySetup = new HotkeySetupWindow(modMap, keyMap, actionMap, existingHotkeys)
             {
-                var psi = new ProcessStartInfo(System.IO.Path.GetDirectoryName(getHotkeyFileAppData()));
-                psi.UseShellExecute = true;
-                Process.Start(psi);
-            }
-            else if (Keyboard.IsKeyDown(Key.LeftAlt))
+                Owner = this
+            };
+
+            bool? result = hotkeySetup.ShowDialog();
+
+            if (result == true)
             {
-                var res = MessageBox.Show("Reset hotkey file?", "Reset hotkeys", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                if (res == MessageBoxResult.Yes)
-                {
-                    backupHotkeyFile();
-                    generateDefaultHotkeyFile();
-                    var psi = new ProcessStartInfo(hotkeyFile());
-                    psi.UseShellExecute = true;
-                    Process.Start(psi);
-                }
+                Utils.debugWrite("Hotkeys updated successfully.");
             }
             else
             {
-                if (!File.Exists(hotkeyFile())) { generateDefaultHotkeyFile(); }
-                var psi = new ProcessStartInfo(hotkeyFile());
-                psi.UseShellExecute = true;
-                Process.Start(psi);
+                Utils.debugWrite("Hotkey setup canceled.");
             }
+        }
+
+        public void UpdateHotkeys(Dictionary<string, Modifiers> modMap,
+                          Dictionary<string, Key> keyMap,
+                          Dictionary<string, HOTKEY_ACTIONS> actionMap)
+        {
+            this.modMap = modMap;
+            this.keyMap = keyMap;
+            this.actionMap = actionMap;
         }
 
         private void goToWebsite(object sender, RoutedEventArgs e)
@@ -1248,7 +1370,7 @@ namespace EldenRingTool
             if (!File.Exists(getUpdCheckFile()))
             {
                 chkAutoUpdate.IsChecked = true;
-                var t = new Thread(()=>
+                var t = new Thread(() =>
                 {
                     try
                     {
@@ -1367,7 +1489,7 @@ namespace EldenRingTool
             _process.offAndUnFreeze(ERProcess.DebugOpts.EVENT_STOP);
         }
 
-        
+
         private void freeCamOn(object sender, RoutedEventArgs e)
         {
             if (_freeCamFirstActivation || Keyboard.IsKeyDown(Key.LeftShift))
@@ -1383,7 +1505,7 @@ namespace EldenRingTool
             _process.offAndUnFreeze(ERProcess.DebugOpts.FREE_CAM);
         }
 
-        
+
         private void toggleStatsFull(object sender, RoutedEventArgs e)
         {
             if (!isCompact)
@@ -1403,19 +1525,19 @@ namespace EldenRingTool
             mainPanel.Visibility = Visibility.Collapsed;
 
             freezeHPPanel.Visibility = Visibility.Collapsed;
-            quitoutButton.Visibility = Visibility.Collapsed;
-            updatePanel.Visibility = Visibility.Collapsed;
+            BottomPanelButtons.Visibility = Visibility.Collapsed;
+            //updatePanel.Visibility = Visibility.Collapsed;
 
             isCompact = true;
         }
-            
+
         void setFull()
         {
             mainPanel.Visibility = Visibility.Visible;
 
             freezeHPPanel.Visibility = Visibility.Visible;
-            quitoutButton.Visibility = Visibility.Visible;
-            updatePanel.Visibility = Visibility.Visible;
+            BottomPanelButtons.Visibility = Visibility.Visible;
+            //updatePanel.Visibility = Visibility.Visible;
 
             isCompact = false;
         }
@@ -1449,9 +1571,9 @@ namespace EldenRingTool
         {
             var dbLocations = File.ReadAllLines(posDbFile());
             var locations = new List<TeleportLocation>();
-            for (int i = 0; i < dbLocations.Length; i++) 
+            for (int i = 0; i < dbLocations.Length; i++)
             {
-                locations.Add(new TeleportLocation(dbLocations[i]));   
+                locations.Add(new TeleportLocation(dbLocations[i]));
             }
 
             var sel = new Selection(locations.ToList<object>(), (x) => { if (x != null) { doGlobalTP((x as TeleportLocation).getCoords()); } }, "Choose a location: ");
@@ -1639,7 +1761,7 @@ namespace EldenRingTool
             DistanceSlider.IsEnabled = false;
             _process.offAndUnFreeze(ERProcess.DebugOpts.TARGETING_VIEW);
         }
-        
+
         private void ReducedTargetingViewOn(object sender, RoutedEventArgs e)
         {
             DistanceSlider.IsEnabled = true;
@@ -1651,7 +1773,7 @@ namespace EldenRingTool
             DistanceSlider.IsEnabled = false;
             _process.ToggleReducedTargetView(false);
         }
-        
+
         private void DistanceSliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             if (DistanceText != null)
@@ -1678,6 +1800,13 @@ namespace EldenRingTool
             var itemSpawn = new ItemSpawn(_process);
             itemSpawn.Owner = this;
             itemSpawn.Show();
+        }
+
+        private void multiSpawn(object sender, RoutedEventArgs e)
+        {
+            var multiSpawn = new MutliSpawn(_process);
+            multiSpawn.Owner = this;
+            multiSpawn.Show();
         }
 
         private void torrentAnywhereOn(object sender, RoutedEventArgs e)
@@ -1856,8 +1985,8 @@ namespace EldenRingTool
                 var textBox = dockPanel.Children.OfType<TextBlock>().FirstOrDefault();
                 if (textBox != null)
                 {
-                    textBox.Text = stackPanel.Visibility == Visibility.Visible ? 
-                                                            textBox.Text.Substring(0, textBox.Text.Length - 1) + "▼" : 
+                    textBox.Text = stackPanel.Visibility == Visibility.Visible ?
+                                                            textBox.Text.Substring(0, textBox.Text.Length - 1) + "▼" :
                                                             textBox.Text.Substring(0, textBox.Text.Length - 1) + "▲";
                 }
             }
@@ -1923,6 +2052,19 @@ namespace EldenRingTool
                 }
             }
             FixPanelArrows(dockPanel, panelVisibility);
+        }
+
+        private void unlockGraces(object sender, RoutedEventArgs e)
+        {
+            var main = this;
+            var unlockGraces = new UnlockGraces(_process);
+
+            unlockGraces.WindowStartupLocation = WindowStartupLocation.Manual;
+            unlockGraces.Left = main.Left + main.Width + 10; 
+            unlockGraces.Top = main.Top;
+
+            unlockGraces.Owner = this;
+            unlockGraces.Show();
         }
     }
 }
