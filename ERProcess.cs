@@ -2325,6 +2325,7 @@ namespace EldenRingTool
             _data.Add("Base Bosses", importIDNameTsv("BaseBosses.tsv"));
             _data.Add("DLC Bosses", importIDNameTsv("DLCBosses.tsv"));
             _data.Add("Cookbooks & Crafting Kit", importIDNameTsv("Cookbooks.tsv"));
+            _data.Add("DLC Cookbooks", importIDNameTsv("DLC Cookbooks.tsv"));
             _data.Add("Whetblades", importIDNameTsv("Whetblades.tsv"));
             _loaded = true;
         }
@@ -2467,4 +2468,5 @@ namespace EldenRingTool
         }
     }
 }
+
 
